@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import Canvas from '../../components/Canvas';
 import styles from './TowerDefense.module.css';
-import { TowerDefenseLogic } from './TowerDefense.ts';
+import { TowerDefenseImplimentation } from './TowerDefense.ts';
 
 export default function TowerDefense() {
   useEffect(() => {
-    void TowerDefenseLogic.loadImages();
+    void TowerDefenseImplimentation.loadImages();
   }, []);
 
   return (
@@ -15,8 +15,8 @@ export default function TowerDefense() {
         width={800}
         height={600}
         className={styles.canvas}
-        draw={TowerDefenseLogic.draw}
-        onClick={TowerDefenseLogic.startGame}
+        draw={TowerDefenseImplimentation.draw}
+        onClick={TowerDefenseImplimentation.startGame}
       />
       <p>
         <Link to="/">Back to Projects</Link>
