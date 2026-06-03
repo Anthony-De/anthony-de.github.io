@@ -1,4 +1,9 @@
-import { DecorationKey, TileKey, SpriteSheetFrame } from '../canvasGames/TowerDefense/types';
+import {
+    DecorationKey,
+    TileKey,
+    SpriteSheetFrame,
+    Sprite
+} from '../canvasGames/TowerDefense/types';
 
 export class ImageProcessing {
     private static getNumberAttribute(element: Element, attributeName: string): number | null {
