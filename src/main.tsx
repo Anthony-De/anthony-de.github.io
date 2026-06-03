@@ -7,16 +7,16 @@ import TowerDefense from './canvasGames/TowerDefense/TowerDefense.tsx';
 const rootElement = document.querySelector<HTMLElement>('#root');
 
 if (!rootElement) {
-  throw new Error('Root element #root was not found in index.html');
+    throw new Error('Root element #root was not found in index.html');
 }
 
 createRoot(rootElement).render(
-  <StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/Tower-Defense" element={<TowerDefense />} />
-      </Routes>
-    </BrowserRouter>
-  </StrictMode>,
+    <StrictMode>
+        <BrowserRouter>
+            <Routes>
+                <Route path="/" element={<App />} />
+                <Route path="/Tower-Defense" element={<TowerDefense />} />
+            </Routes>
+        </BrowserRouter>
+    </StrictMode>
 );

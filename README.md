@@ -20,6 +20,18 @@ pnpm dev
 pnpm build
 ```
 
+## Format
+
+```bash
+pnpm format
+```
+
+To verify formatting without changing files:
+
+```bash
+pnpm format:check
+```
+
 ## Deploy to GitHub Pages
 
 ```bash
