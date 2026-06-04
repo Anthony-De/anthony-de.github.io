@@ -1,5 +1,5 @@
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../../constants';
-import type { CanvasFrame, Sprite, Tile } from './types';
+import type { CanvasFrame, Neighbors, Sprite, Tile } from './types';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { ImageProcessing } from '../../utils/image-processing';
 
@@ -18,6 +18,10 @@ type CanvasMouseEvent = ReactMouseEvent<HTMLCanvasElement>;
 type TilePosition = {
     row: number;
     col: number;
+};
+type Point = {
+    x: number;
+    y: number;
 };
 
 export class TowerDefenseManager {
@@ -55,7 +59,7 @@ export class TowerDefenseManager {
             for (let col = 0; col < 10; col++) {
                 TowerDefenseManager.map[row][col] = {
                     key: 'landscape_1',
-                    name: `${row}_${col}`
+                    name: `landscape`
                 };
             }
         }
@@ -134,50 +138,6 @@ export class TowerDefenseManager {
         //         offsetY: CANVAS_HEIGHT / 5
         //     }
         // );
-
-        // Drive motion from elapsed time so animation speed stays consistent.
-        // const enemyX = ((frame.elapsedTime * 0.12) % (CANVAS_WIDTH + 80)) - 40;
-        // const towerPulse = 1 + Math.sin(frame.elapsedTime / 250) * 0.08;
-        // const projectileProgress = (frame.elapsedTime % 900) / 900;
-        // const projectileStartX = 160;
-        // const projectileStartY = 175;
-        // const projectileX =
-        //   projectileStartX + (enemyX - projectileStartX) * projectileProgress;
-        // const projectileY =
-        //   projectileStartY + (285 - projectileStartY) * projectileProgress;
-        // // Background and map lane.
-        // ctx.fillStyle = '#102022';
-        // ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        // ctx.fillStyle = '#334b32';
-        // ctx.fillRect(0, 250, CANVAS_WIDTH, 120);
-        // ctx.fillStyle = '#202a2d';
-        // ctx.fillRect(0, 282, CANVAS_WIDTH, 56);
-        // ctx.strokeStyle = '#c5a15c';
-        // ctx.lineWidth = 3;
-        // ctx.setLineDash([14, 18]);
-        // ctx.beginPath();
-        // ctx.moveTo(0, 310);
-        // ctx.lineTo(CANVAS_WIDTH, 310);
-        // ctx.stroke();
-        // ctx.setLineDash([]);
-        // // Tower body pulses slightly to show it is active.
-        // const towerWidth = (CANVAS_WIDTH / 8) * towerPulse;
-        // const towerHeight = (CANVAS_HEIGHT / 6) * towerPulse;
-        // const towerX = 110 - (towerWidth - CANVAS_WIDTH / 8) / 2;
-        // const towerY = 125 - (towerHeight - CANVAS_HEIGHT / 6) / 2;
-        // ctx.fillStyle = '#808a8f';
-        // ctx.fillRect(towerX, towerY, towerWidth, towerHeight);
-        // ctx.fillStyle = '#b8c4c9';
-        // ctx.fillRect(towerX + towerWidth * 0.35, towerY - 24, towerWidth * 0.3, 28);
-        // // Enemy follows the road, while the projectile interpolates toward it.
-        // ctx.fillStyle = '#df6a4d';
-        // ctx.beginPath();
-        // ctx.arc(enemyX, 310, 22, 0, Math.PI * 2);
-        // ctx.fill();
-        // ctx.fillStyle = '#ffda6b';
-        // ctx.beginPath();
-        // ctx.arc(projectileX, projectileY, 7, 0, Math.PI * 2);
-        // ctx.fill();
     };
 
     public draw = (ctx: CanvasRenderingContext2D, frame: CanvasFrame): void => {
@@ -188,93 +148,269 @@ export class TowerDefenseManager {
         }
     };
 
-    private static getNeighbors(tile: Tile): Tile[] {
-        const neighbors: Tile[] = [];
-        for (let row = 0; row < TowerDefenseManager.map.length; row++) {
-            for (let col = 0; col < TowerDefenseManager.map[row].length; col++) {
-                if (TowerDefenseManager.map[row][col] === tile) {
-                    if (row > 0) neighbors.push(TowerDefenseManager.map[row - 1][col]); // Up
-                    if (row < TowerDefenseManager.map.length - 1)
-                        neighbors.push(TowerDefenseManager.map[row + 1][col]); // Down
-                    if (col > 0) neighbors.push(TowerDefenseManager.map[row][col - 1]); // Left
-                    if (col < TowerDefenseManager.map[row].length - 1)
-                        neighbors.push(TowerDefenseManager.map[row][col + 1]); // Right
+    private static getNeighboringTiles(point: Point): Neighbors {
+        const neighbors: Neighbors = {};
+        const directions: Point[] = [
+            { x: 0, y: -1 },
+            { x: 0, y: 1 },
+            { x: -1, y: 0 },
+            { x: 1, y: 0 }
+        ];
+
+        for (const direction of directions) {
+            const neighborX = point.x + direction.x;
+            const neighborY = point.y + direction.y;
+
+            if (
+                neighborX >= 0 &&
+                neighborX < TowerDefenseManager.map[0].length &&
+                neighborY >= 0 &&
+                neighborY < TowerDefenseManager.map.length
+            ) {
+                if (direction.x === 0 && direction.y === -1) {
+                    neighbors.up = TowerDefenseManager.map[neighborY][neighborX];
+                } else if (direction.x === 0 && direction.y === 1) {
+                    neighbors.down = TowerDefenseManager.map[neighborY][neighborX];
+                } else if (direction.x === -1 && direction.y === 0) {
+                    neighbors.left = TowerDefenseManager.map[neighborY][neighborX];
+                } else if (direction.x === 1 && direction.y === 0) {
+                    neighbors.right = TowerDefenseManager.map[neighborY][neighborX];
                 }
             }
         }
+
+        for (const neighbor in neighbors) {
+            if (
+                !TowerDefenseManager.isWalkableTile(neighbors[neighbor as keyof Neighbors] as Tile)
+            ) {
+                delete neighbors[neighbor as keyof Neighbors];
+            }
+        }
+
         return neighbors;
     }
 
-    // private static updatePath(): void {
-    //     // Update the keys of the paths so they face the correct direction based on their neighbors.
-    //     for (let row = 0; row < TowerDefenseManager.map.length; row++) {
-    //         for (let col = 0; col < TowerDefenseManager.map[row].length; col++) {
-    //             const tile = TowerDefenseManager.map[row][col];
-    //             if (tile.name === 'path') {
-    //                 const neighbors = TowerDefenseManager.getNeighbors(tile);
-    //                 const hasUp = neighbors.some((n) => n.name === 'path' && n.key === 'path_0');
-    //                 const hasDown = neighbors.some((n) => n.name === 'path' && n.key === 'path_0');
-    //                 const hasLeft = neighbors.some((n) => n.name === 'path' && n.key === 'path_1');
-    //                 const hasRight = neighbors.some((n) => n.name === 'path' && n.key === 'path_1');
+    private static calculatePath(): boolean {
+        TowerDefenseManager.clearCalculatedPath();
 
-    //                 if (hasUp && hasDown && !hasLeft && !hasRight) {
-    //                     TowerDefenseManager.map[row][col].key = 'path_0'; // Vertical
-    //                 } else if (!hasUp && !hasDown && hasLeft && hasRight) {
-    //                     TowerDefenseManager.map[row][col].key = 'path_1'; // Horizontal
-    //                 } else if (hasUp && hasRight && !hasDown && !hasLeft) {
-    //                     TowerDefenseManager.map[row][col].key = 'path_2'; // Curve up-right
-    //                 } else if (hasDown && hasRight && !hasUp && !hasLeft) {
-    //                     TowerDefenseManager.map[row][col].key = 'path_3'; // Curve down-right
-    //                 } else if (hasDown && hasLeft && !hasUp && !hasRight) {
-    //                     TowerDefenseManager.map[row][col].key = 'path_4'; // Curve down-left
-    //                 } else if (hasUp && hasLeft && !hasDown && !hasRight) {
-    //                     TowerDefenseManager.map[row][col].key = 'path_5'; // Curve up-left
-    //                 } else {
-    //                     TowerDefenseManager.map[row][col].key = 'path_0'; // Default to vertical if something goes wrong
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+        const start = TowerDefenseManager.findTilePositionByName('spawn');
+        const goal = TowerDefenseManager.findTilePositionByName('goal');
 
-    private static calculatePath(): void {
-        const spawn = TowerDefenseManager.map.flat().find((tile) => tile.name === 'spawn');
-        const goal = TowerDefenseManager.map.flat().find((tile) => tile.name === 'goal');
-
-        if (!spawn || !goal) {
+        if (!start || !goal) {
             console.error('Spawn or goal tile not found!');
-            return;
+            return false;
         }
 
-        // Use a simple breadth-first search to find the path from spawn to goal.
-        const queue: { tile: Tile; path: Tile[] }[] = [{ tile: spawn, path: [spawn] }];
-        const visited = new Set<Tile>();
-        visited.add(spawn);
+        // Pre-calculate distance to goal for all tiles
+        for (let y = 0; y < TowerDefenseManager.map.length; y++) {
+            for (let x = 0; x < TowerDefenseManager.map[y].length; x++) {
+                const tile = TowerDefenseManager.map[y][x];
+                tile.distanceToGoal = Math.abs(goal.x - x) + Math.abs(goal.y - y);
+            }
+        }
 
-        while (queue.length > 0) {
-            const { tile, path } = queue.shift()!;
-            if (tile === goal) {
-                // Mark the path tiles for visualization.
-                for (const pathTile of path) {
-                    if (pathTile.name !== 'spawn' && pathTile.name !== 'goal') {
-                        pathTile.name = 'path';
+        const path = TowerDefenseManager.findPathAStar(start, goal);
+        if (!path) {
+            console.error('No path found from spawn to goal!');
+            return false;
+        }
+
+        // Set the tiles along the path to have a "path" name, which will be used for rendering the correct sprite
+        for (const point of path) {
+            const tile = TowerDefenseManager.map[point.y][point.x];
+            if (tile.name !== 'spawn' && tile.name !== 'goal') tile.name = 'path';
+        }
+
+        TowerDefenseManager.applyCalculatedPath(path);
+        return true;
+    }
+
+    private static findPathAStar(start: Point, goal: Point): Point[] | null {
+        const openSet: Point[] = [start];
+        const cameFrom = new Map<string, Point>();
+        const gScore = new Map<string, number>([[TowerDefenseManager.getPointKey(start), 0]]);
+        const fScore = new Map<string, number>([
+            [TowerDefenseManager.getPointKey(start), TowerDefenseManager.getDistance(start, goal)]
+        ]);
+
+        while (openSet.length > 0) {
+            const current = TowerDefenseManager.getLowestScorePoint(openSet, fScore);
+
+            if (current.x === goal.x && current.y === goal.y) {
+                return TowerDefenseManager.reconstructPath(cameFrom, current);
+            }
+
+            openSet.splice(openSet.indexOf(current), 1);
+
+            for (const neighbor of TowerDefenseManager.getNeighboringPoints(current)) {
+                const currentScore =
+                    gScore.get(TowerDefenseManager.getPointKey(current)) ?? Infinity;
+                const tentativeScore = currentScore + 1;
+                const neighborKey = TowerDefenseManager.getPointKey(neighbor);
+
+                if (tentativeScore < (gScore.get(neighborKey) ?? Infinity)) {
+                    cameFrom.set(neighborKey, current);
+                    gScore.set(neighborKey, tentativeScore);
+                    fScore.set(
+                        neighborKey,
+                        tentativeScore + TowerDefenseManager.getDistance(neighbor, goal)
+                    );
+
+                    if (
+                        !openSet.some(
+                            (openPoint) => openPoint.x === neighbor.x && openPoint.y === neighbor.y
+                        )
+                    ) {
+                        openSet.push(neighbor);
                     }
                 }
-                // TowerDefenseManager.updatePath();
-                return;
             }
+        }
 
-            // Get neighboring tiles (up, down, left, right).
-            const neighbors = TowerDefenseManager.getNeighbors(tile);
-            for (const neighbor of neighbors) {
-                if (!visited.has(neighbor)) {
-                    visited.add(neighbor);
-                    queue.push({ tile: neighbor, path: [...path, neighbor] });
+        return null;
+    }
+
+    private static getNeighboringPoints(point: Point): Point[] {
+        const neighbors: Point[] = [];
+        const directions: Point[] = [
+            { x: 0, y: -1 },
+            { x: 0, y: 1 },
+            { x: -1, y: 0 },
+            { x: 1, y: 0 }
+        ];
+
+        for (const direction of directions) {
+            const neighbor: Point = {
+                x: point.x + direction.x,
+                y: point.y + direction.y
+            };
+
+            if (
+                neighbor.x >= 0 &&
+                neighbor.x < TowerDefenseManager.map[0].length &&
+                neighbor.y >= 0 &&
+                neighbor.y < TowerDefenseManager.map.length &&
+                TowerDefenseManager.isWalkableTile(TowerDefenseManager.map[neighbor.y][neighbor.x])
+            ) {
+                neighbors.push(neighbor);
+            }
+        }
+
+        return neighbors;
+    }
+
+    private static getLowestScorePoint(points: Point[], scores: Map<string, number>): Point {
+        return points.reduce((bestPoint, point) => {
+            const bestScore = scores.get(TowerDefenseManager.getPointKey(bestPoint)) ?? Infinity;
+            const pointScore = scores.get(TowerDefenseManager.getPointKey(point)) ?? Infinity;
+
+            return pointScore < bestScore ? point : bestPoint;
+        });
+    }
+
+    private static reconstructPath(cameFrom: Map<string, Point>, current: Point): Point[] {
+        const path = [current];
+        let currentKey = TowerDefenseManager.getPointKey(current);
+
+        while (cameFrom.has(currentKey)) {
+            current = cameFrom.get(currentKey) as Point;
+            currentKey = TowerDefenseManager.getPointKey(current);
+            path.unshift(current);
+        }
+
+        return path;
+    }
+
+    private static getDistance(a: Point, b: Point): number {
+        return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    }
+
+    private static getPointKey(point: Point): string {
+        return `${point.x},${point.y}`;
+    }
+
+    private static isWalkableTile(tile: Tile): boolean {
+        return (
+            !tile.key.startsWith('tree_') &&
+            !tile.key.startsWith('rock_') &&
+            !tile.key.startsWith('crystal_') &&
+            !tile.key.startsWith('tower_')
+        );
+    }
+
+    private static findTilePositionByName(name: string): Point | null {
+        for (let y = 0; y < TowerDefenseManager.map.length; y++) {
+            for (let x = 0; x < TowerDefenseManager.map[y].length; x++) {
+                if (TowerDefenseManager.map[y][x].name === name) {
+                    return { x, y };
                 }
             }
         }
 
-        console.error('No path found from spawn to goal!');
+        return null;
+    }
+
+    private static applyCalculatedPath(path: Point[]): void {
+        for (const point of path) {
+            const tile = TowerDefenseManager.map[point.y][point.x];
+            if (tile.name !== 'spawn' && tile.name !== 'goal') {
+                const n: Neighbors = this.getNeighboringTiles(point);
+
+                const up = TowerDefenseManager.isPathConnector(n.up);
+                const down = TowerDefenseManager.isPathConnector(n.down);
+                const left = TowerDefenseManager.isPathConnector(n.left);
+                const right = TowerDefenseManager.isPathConnector(n.right);
+
+                //  if (up && left && down) {
+                //     // T shapes
+                //     // Up, left, down : path_7
+                //     // Up, right, down: path_5
+                //     // Up, left, right: path_4
+                //     // Down, left, right: path_6
+                //     tile.key = 'path_7';
+                // }
+
+                // All Way
+                // Up, down, left, right: path_10
+                if (up && down && left && right) {
+                    tile.key = 'path_10';
+                }
+
+                // Corners
+                if (up && right) {
+                    tile.key = 'path_11';
+                } else if (down && right) {
+                    tile.key = 'path_12';
+                } else if (left && down) {
+                    tile.key = 'path_13';
+                } else if (up && left) {
+                    tile.key = 'path_14';
+                }
+
+                // Straights
+                else if (up && down) {
+                    tile.key = 'path_15';
+                } else if (left && right) {
+                    tile.key = 'path_16';
+                }
+            }
+        }
+    }
+
+    private static isPathConnector(tile: Tile | undefined): boolean {
+        return tile?.name === 'path' || tile?.name === 'spawn' || tile?.name === 'goal';
+    }
+
+    private static clearCalculatedPath(): void {
+        for (let y = 0; y < TowerDefenseManager.map.length; y++) {
+            for (let x = 0; x < TowerDefenseManager.map[y].length; x++) {
+                const tile = TowerDefenseManager.map[y][x];
+                if (tile.name === 'path') {
+                    tile.name = 'landscape';
+                    tile.key = 'landscape_1';
+                }
+            }
+        }
     }
 
     public onMouseDown(event: CanvasMouseEvent): void {
@@ -304,6 +440,29 @@ export class TowerDefenseManager {
         }
 
         this.setPressedTilePosition(null);
+
+        if (!hit || !this.areTilePositionsEqual(pressedPosition, hit.position)) {
+            return;
+        }
+
+        const tile = hit.tile;
+        if (tile.name === 'spawn' || tile.name === 'goal') {
+            return;
+        }
+
+        const previousTile = {
+            key: tile.key,
+            name: tile.name
+        };
+
+        tile.key = 'rock_0';
+        tile.name = 'rock';
+
+        if (!TowerDefenseManager.calculatePath()) {
+            tile.key = previousTile.key;
+            tile.name = previousTile.name;
+            TowerDefenseManager.calculatePath();
+        }
     }
 
     public onMouseLeave(): void {

@@ -13,7 +13,10 @@ export class MapDrawer {
             offsetY = 0,
             showTileCoords = false,
             showTileOrigins = false,
-            showGrid = false
+            showGrid = false,
+            showDistanceToGoal = false,
+            showTileKeys = false,
+            showTileNames = false
         } = config ?? {};
 
         for (let row = 0; row < tiles.length; row++) {
@@ -54,7 +57,7 @@ export class MapDrawer {
         }
 
         // Draw 2.5D grid for debugging.
-        if (showGrid || showTileCoords) {
+        if (showGrid || showTileCoords || showDistanceToGoal || showTileKeys || showTileNames) {
             for (let row = 0; row < tiles.length; row++) {
                 for (let col = 0; col < tiles[row].length; col++) {
                     const x = (col - row) * (TILE_SIZE / 2) + offsetX;
@@ -77,6 +80,36 @@ export class MapDrawer {
                         ctx.textBaseline = 'middle';
                         ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
                         ctx.fillText(`${col},${row}`, x, y + TILE_SIZE / 4);
+                    }
+
+                    if (showDistanceToGoal) {
+                        const tile = tiles[row][col];
+
+                        ctx.font = '10px MONOSPACE';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                        ctx.fillText(`${tile.distanceToGoal}`, x, y + TILE_SIZE / 4);
+                    }
+
+                    if (showTileKeys) {
+                        const tile = tiles[row][col];
+
+                        ctx.font = '10px MONOSPACE';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                        ctx.fillText(`${tile.key ?? ''}`, x, y + TILE_SIZE / 4);
+                    }
+
+                    if (showTileNames) {
+                        const tile = tiles[row][col];
+
+                        ctx.font = '10px MONOSPACE';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                        ctx.fillText(`${tile.name ?? ''}`, x, y + TILE_SIZE / 4);
                     }
                 }
             }

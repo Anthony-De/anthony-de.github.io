@@ -49,13 +49,24 @@ export type MapDrawConfig = {
     padding?: number;
     showTileCoords?: boolean;
     showTileOrigins?: boolean;
+    showTileNames?: boolean;
     showGrid?: boolean;
+    showDistanceToGoal?: boolean;
+    showTileKeys?: boolean;
 };
 
 export type Tile = {
     name: string;
     key: TileKey;
+    distanceToGoal?: number;
     selectable?: boolean;
     isHovered?: boolean;
     isPressed?: boolean;
+};
+
+export type Neighbors = {
+    up?: Tile;
+    down?: Tile;
+    left?: Tile;
+    right?: Tile;
 };
