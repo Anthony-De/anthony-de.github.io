@@ -1,9 +1,4 @@
-import {
-    DecorationKey,
-    TileKey,
-    SpriteSheetFrame,
-    Sprite
-} from '../canvasGames/TowerDefense/types';
+import { SpriteKey, SpriteSheetFrame, Sprite } from '../canvasGames/TowerDefense/types';
 
 export class ImageProcessing {
     private static getNumberAttribute(element: Element, attributeName: string): number | null {
@@ -27,11 +22,11 @@ export class ImageProcessing {
         return filename.substring(0, lastDotIndex);
     }
 
-    private static getSpriteName(filename: string): TileKey | DecorationKey {
+    private static getSpriteName(filename: string): SpriteKey {
         const sourceName = this.removeExtension(filename);
         return (
             // spriteNameAliases[sourceName] ??
-            sourceName as TileKey | DecorationKey
+            sourceName as SpriteKey
         );
     }
 

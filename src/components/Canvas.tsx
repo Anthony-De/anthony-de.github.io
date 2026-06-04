@@ -8,6 +8,10 @@ interface CanvasProps {
     className?: string;
     draw?: (ctx: CanvasRenderingContext2D, frame: CanvasFrame) => void;
     onClick?: React.MouseEventHandler<HTMLCanvasElement>;
+    onMouseDown?: React.MouseEventHandler<HTMLCanvasElement>;
+    onMouseMove?: React.MouseEventHandler<HTMLCanvasElement>;
+    onMouseUp?: React.MouseEventHandler<HTMLCanvasElement>;
+    onMouseLeave?: React.MouseEventHandler<HTMLCanvasElement>;
 }
 
 const Canvas: React.FC<CanvasProps> = ({
@@ -15,7 +19,11 @@ const Canvas: React.FC<CanvasProps> = ({
     height = CANVAS_HEIGHT,
     className = '',
     draw = () => {},
-    onClick
+    onClick,
+    onMouseDown,
+    onMouseMove,
+    onMouseUp,
+    onMouseLeave
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -67,6 +75,10 @@ const Canvas: React.FC<CanvasProps> = ({
             height={height}
             className={className}
             onClick={onClick}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseLeave}
         />
     );
 };

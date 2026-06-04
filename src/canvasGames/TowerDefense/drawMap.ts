@@ -1,94 +1,131 @@
-import { Sprite, TileKey } from './types';
+import { Sprite, MapDrawConfig, Tile } from './types';
 import { TILE_SIZE } from './constants';
 
 export class MapDrawer {
-    private ctx: CanvasRenderingContext2D;
-
-    constructor(ctx: CanvasRenderingContext2D) {
-        this.ctx = ctx;
-    }
-
-    drawMap(
-        tiles: TileKey[][],
+    public static drawMap(
+        ctx: CanvasRenderingContext2D,
+        tiles: Tile[][],
         sprites: Sprite[],
-        offsetX: number = 200,
-        offsetY: number = 100,
-        debug: boolean = false
+        config?: MapDrawConfig
     ): void {
+        const {
+            offsetX = 0,
+            offsetY = 0,
+            showTileCoords = false,
+            showTileOrigins = false,
+            showGrid = false
+        } = config ?? {};
+
         for (let row = 0; row < tiles.length; row++) {
             for (let col = 0; col < tiles[row].length; col++) {
-                const sprite: Sprite | undefined = sprites.find((s) => s.name === tiles[row][col]);
+                const tile = tiles[row][col];
+                const sprite: Sprite | undefined = sprites.find((s) => s.name === tile.key);
 
                 const x = (col - row) * (TILE_SIZE / 2) + offsetX;
                 const y = (col + row) * (TILE_SIZE / 4) + offsetY;
 
                 if (sprite) {
-                    this.ctx.drawImage(
+                    const spriteHeight = TILE_SIZE * (sprite.image.height / sprite.image.width);
+                    const spriteYOffset = this.getSpriteYOffset(sprite);
+
+                    ctx.drawImage(
                         sprite.image,
                         x - TILE_SIZE / 2,
-                        y - TILE_SIZE * (sprite.image.height / sprite.image.width) + TILE_SIZE / 2,
+                        y - spriteHeight + TILE_SIZE / 2 + spriteYOffset,
                         TILE_SIZE,
-                        TILE_SIZE * (sprite.image.height / sprite.image.width)
+                        spriteHeight
                     );
-                    if (debug) {
-                        this.ctx.fillStyle = 'rgb(0, 0, 255)';
-                        this.ctx.beginPath();
-                        this.ctx.ellipse(x, y, 3, 3, 0, 0, Math.PI * 2);
-                        this.ctx.fill();
+                    if (this.isOverlayNeeded(tile)) {
+                        this.drawPlaceholderTile(
+                            ctx,
+                            tile,
+                            x,
+                            y - spriteHeight + TILE_SIZE / 2 + spriteYOffset
+                        );
                     }
+                }
+                if (showTileOrigins) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.ellipse(x, y, 3, 3, 0, 0, Math.PI * 2);
+                    ctx.fill();
                 }
             }
         }
 
         // Draw 2.5D grid for debugging.
-        if (debug) {
+        if (showGrid || showTileCoords) {
             for (let row = 0; row < tiles.length; row++) {
                 for (let col = 0; col < tiles[row].length; col++) {
                     const x = (col - row) * (TILE_SIZE / 2) + offsetX;
                     const y = (col + row) * (TILE_SIZE / 4) + offsetY;
-                    this.ctx.strokeStyle = 'rgb(255, 255, 255)';
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x, y);
-                    this.ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE / 4);
-                    this.ctx.lineTo(x, y + TILE_SIZE / 2);
-                    this.ctx.lineTo(x - TILE_SIZE / 2, y + TILE_SIZE / 4);
-                    this.ctx.closePath();
-                    this.ctx.stroke();
-                    this.ctx.font = '10px MONOSPACE';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                    this.ctx.fillText(`${col},${row}`, x, y + TILE_SIZE / 4);
-                    this.ctx.beginPath();
-                    this.ctx.ellipse(x, y, 3, 3, 0, 0, Math.PI * 2);
-                    this.ctx.fill();
+
+                    if (showGrid) {
+                        ctx.strokeStyle = 'rgb(255, 255, 255)';
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE / 4);
+                        ctx.lineTo(x, y + TILE_SIZE / 2);
+                        ctx.lineTo(x - TILE_SIZE / 2, y + TILE_SIZE / 4);
+                        ctx.closePath();
+                        ctx.stroke();
+                    }
+
+                    if (showTileCoords) {
+                        ctx.font = '10px MONOSPACE';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                        ctx.fillText(`${col},${row}`, x, y + TILE_SIZE / 4);
+                    }
                 }
             }
         }
     }
 
-    // private getTileImage(tileKey: string): HTMLImageElement | null {
-    //     // This function should return the corresponding image for the given tileKey.
-    //     // You can implement this based on how you manage your sprite sheets and images.
-    //     // For example, you might have a mapping of tile keys to image objects.
-    //     // Here, we will just return null as a placeholder.
-    //     return null;
-    // }
+    private static isOverlayNeeded(tile: Tile): boolean {
+        return (
+            tile.name === 'spawn' || tile.name === 'goal' || !!tile.isHovered || !!tile.isPressed
+        );
+    }
 
-    // drawDecorations(decorations: { sprite: string; x: number; y: number }[]) {
-    //     for (const decor of decorations) {
-    //         const decorImage = this.getTileImage(decor.sprite);
-    //         if (decorImage) {
-    //             this.ctx.drawImage(
-    //                 decorImage,
-    //                 decor.x * TILE_SIZE,
-    //                 decor.y * TILE_SIZE,
-    //                 TILE_SIZE,
-    //                 TILE_SIZE
-    //             );
-    //         }
-    //     }
-    // }
+    private static getSpriteYOffset(sprite: Sprite): number {
+        return sprite.type === 'landscape' || sprite.type === 'path' ? TILE_SIZE / 4 : 0;
+    }
 
-    // You can add more methods for drawing paths, towers, enemies, etc. as needed.
+    public static drawPlaceholderTile(
+        ctx: CanvasRenderingContext2D,
+        tile: Tile,
+        x: number,
+        y: number
+    ): void {
+        const fillColor = tile.isPressed
+            ? 'rgba(250, 204, 21, 0.8)'
+            : tile.name === 'spawn'
+              ? 'rgba(34, 197, 94, 0.85)'
+              : tile.name === 'goal'
+                ? 'rgba(239, 68, 68, 0.85)'
+                : 'rgba(255, 255, 255, 0.35)';
+        const label =
+            tile.name === 'spawn' || tile.name === 'goal' ? tile.name.charAt(0).toUpperCase() : '';
+
+        ctx.fillStyle = fillColor;
+        ctx.strokeStyle = tile.isHovered ? 'rgba(255, 255, 255, 0.9)' : fillColor;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE / 4);
+        ctx.lineTo(x, y + TILE_SIZE / 2);
+        ctx.lineTo(x - TILE_SIZE / 2, y + TILE_SIZE / 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        if (label) {
+            ctx.fillStyle = 'rgba(38, 38, 38, 0.9)';
+            ctx.font = 'bold 14px MONOSPACE';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(label, x, y + TILE_SIZE / 4);
+        }
+    }
 }

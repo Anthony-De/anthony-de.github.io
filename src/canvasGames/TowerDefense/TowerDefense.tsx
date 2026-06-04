@@ -14,7 +14,10 @@ export default function TowerDefense() {
                 height={600}
                 className={styles.canvas}
                 draw={(ctx, frame) => TDManager.draw(ctx, frame)}
-                onClick={() => TDManager.startGame()}
+                onMouseDown={(event) => TDManager.onMouseDown(event)}
+                onMouseMove={(event) => TDManager.onMouseMove(event)}
+                onMouseUp={(event) => TDManager.onMouseUp(event)}
+                onMouseLeave={() => TDManager.onMouseLeave()}
             />
             <p>
                 <Link to="/">Back to Projects</Link>
