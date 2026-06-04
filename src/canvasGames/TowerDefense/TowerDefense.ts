@@ -104,16 +104,6 @@ export class TowerDefenseManager {
         ctx.fillStyle = '#597f9c';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-        // MapDrawer.drawMap(
-        //     ctx,
-        //     STARTMENU_MAP.tiles,
-        //     Object.values(TowerDefenseManager.assets).flatMap((asset) => asset.sprites),
-        //     {
-        //         offsetX: CANVAS_WIDTH / 3,
-        //         offsetY: CANVAS_HEIGHT / 3
-        //     }
-        // );
-
         MapDrawer.drawMap(
             ctx,
             TowerDefenseManager.map,
@@ -128,16 +118,6 @@ export class TowerDefenseManager {
     public gameScreen = (ctx: CanvasRenderingContext2D, _frame: CanvasFrame): void => {
         ctx.fillStyle = '#597f9c';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-        // MapDrawer.drawMap(
-        //     ctx,
-        //     LEVEL_ONE_MAP.tiles,
-        //     Object.values(TowerDefenseManager.assets).flatMap((asset) => asset.sprites),
-        //     {
-        //         offsetX: CANVAS_WIDTH / 2 - 60,
-        //         offsetY: CANVAS_HEIGHT / 5
-        //     }
-        // );
     };
 
     public draw = (ctx: CanvasRenderingContext2D, frame: CanvasFrame): void => {
@@ -455,7 +435,7 @@ export class TowerDefenseManager {
             name: tile.name
         };
 
-        tile.key = 'rock_0';
+        tile.key = `rock_${Math.floor(Math.random() * 7)}` as Tile['key'];
         tile.name = 'rock';
 
         if (!TowerDefenseManager.calculatePath()) {

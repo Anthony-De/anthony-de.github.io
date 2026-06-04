@@ -29,12 +29,11 @@ export class MapDrawer {
 
                 if (sprite) {
                     const spriteHeight = TILE_SIZE * (sprite.image.height / sprite.image.width);
-                    const spriteYOffset = this.getSpriteYOffset(sprite);
 
                     ctx.drawImage(
                         sprite.image,
                         x - TILE_SIZE / 2,
-                        y - spriteHeight + TILE_SIZE / 2 + spriteYOffset,
+                        y - spriteHeight + TILE_SIZE / 2 + TILE_SIZE / 4,
                         TILE_SIZE,
                         spriteHeight
                     );
@@ -43,7 +42,7 @@ export class MapDrawer {
                             ctx,
                             tile,
                             x,
-                            y - spriteHeight + TILE_SIZE / 2 + spriteYOffset
+                            y - spriteHeight + TILE_SIZE / 2 + TILE_SIZE / 4
                         );
                     }
                 }
@@ -120,10 +119,6 @@ export class MapDrawer {
         return (
             tile.name === 'spawn' || tile.name === 'goal' || !!tile.isHovered || !!tile.isPressed
         );
-    }
-
-    private static getSpriteYOffset(sprite: Sprite): number {
-        return sprite.type === 'landscape' || sprite.type === 'path' ? TILE_SIZE / 4 : 0;
     }
 
     public static drawPlaceholderTile(
