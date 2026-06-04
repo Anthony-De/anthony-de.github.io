@@ -29,22 +29,25 @@ export class MapDrawer {
 
                 if (sprite) {
                     const spriteHeight = TILE_SIZE * (sprite.image.height / sprite.image.width);
+                    // const overlayOffset = sprite.type === 'tower' ? TILE_SIZE / 8 : 0;
 
-                    ctx.drawImage(
-                        sprite.image,
-                        x - TILE_SIZE / 2,
-                        y - spriteHeight + TILE_SIZE / 2 + TILE_SIZE / 4,
-                        TILE_SIZE,
-                        spriteHeight
-                    );
-                    if (this.isOverlayNeeded(tile)) {
-                        this.drawPlaceholderTile(
+                    if (sprite.type === 'tower') {
+                        this.drawFullTower(
                             ctx,
-                            tile,
+                            sprites.filter((s) => s.name.startsWith(tile.key as string)),
                             x,
-                            y - spriteHeight + TILE_SIZE / 2 + TILE_SIZE / 4
+                            y
+                        );
+                    } else {
+                        ctx.drawImage(
+                            sprite.image,
+                            x - TILE_SIZE / 2,
+                            y - spriteHeight + TILE_SIZE * 0.75,
+                            TILE_SIZE,
+                            spriteHeight
                         );
                     }
+                    if (this.isOverlayNeeded(tile)) this.drawPlaceholderTile(ctx, tile, x, y); //- overlayOffset);
                 }
                 if (showTileOrigins) {
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -115,11 +118,7 @@ export class MapDrawer {
         }
     }
 
-    private static isOverlayNeeded(tile: Tile): boolean {
-        return (
-            tile.name === 'spawn' || tile.name === 'goal' || !!tile.isHovered || !!tile.isPressed
-        );
-    }
+    private static isOverlayNeeded = (tile: Tile): boolean => !!tile.isHovered || !!tile.isPressed;
 
     public static drawPlaceholderTile(
         ctx: CanvasRenderingContext2D,
@@ -127,15 +126,7 @@ export class MapDrawer {
         x: number,
         y: number
     ): void {
-        const fillColor = tile.isPressed
-            ? 'rgba(250, 204, 21, 0.8)'
-            : tile.name === 'spawn'
-              ? 'rgba(34, 197, 94, 0.85)'
-              : tile.name === 'goal'
-                ? 'rgba(239, 68, 68, 0.85)'
-                : 'rgba(255, 255, 255, 0.35)';
-        const label =
-            tile.name === 'spawn' || tile.name === 'goal' ? tile.name.charAt(0).toUpperCase() : '';
+        const fillColor = tile.isPressed ? 'rgba(250, 204, 21, 0.8)' : 'rgba(255, 255, 255, 0.35)';
 
         ctx.fillStyle = fillColor;
         ctx.strokeStyle = tile.isHovered ? 'rgba(255, 255, 255, 0.9)' : fillColor;
@@ -147,13 +138,21 @@ export class MapDrawer {
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
+    }
 
-        if (label) {
-            ctx.fillStyle = 'rgba(38, 38, 38, 0.9)';
-            ctx.font = 'bold 14px MONOSPACE';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(label, x, y + TILE_SIZE / 4);
-        }
+    public static drawFullTower(
+        ctx: CanvasRenderingContext2D,
+        towerParts: Sprite[],
+        x: number,
+        y: number
+    ): void {
+        const spriteHeight = TILE_SIZE * (towerParts[0].image.height / towerParts[0].image.width);
+        ctx.drawImage(
+            towerParts[0].image,
+            x - TILE_SIZE / 2,
+            y - spriteHeight + TILE_SIZE * 0.75,
+            TILE_SIZE,
+            spriteHeight
+        );
     }
 }

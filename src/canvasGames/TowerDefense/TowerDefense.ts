@@ -12,7 +12,7 @@ import towersGreySheet from './assets/Spritesheet/towers_grey_sheet.xml?raw';
 import landscapeSheetImage from './assets/Spritesheet/landscape_sheet.png';
 import landscapeSheetXml from './assets/Spritesheet/landscape_sheet.xml?raw';
 import { MapDrawer } from './drawMap';
-import { TILE_SIZE } from './constants';
+import { DIRECTIONS, TILE_SIZE } from './constants';
 
 type CanvasMouseEvent = ReactMouseEvent<HTMLCanvasElement>;
 type TilePosition = {
@@ -27,12 +27,17 @@ type Point = {
 export class TowerDefenseManager {
     static screen: 'title' | 'game' = 'title';
 
-    static map: Tile[][] = [];
+    private static readonly MAP_ROWS = 10;
+    private static readonly MAP_COLS = 10;
+    public map: Tile[][] = [];
 
     private static readonly mapOffset = {
         x: CANVAS_WIDTH / 2,
         y: CANVAS_HEIGHT / 4
     };
+
+    private static imagesLoadedPromise: Promise<void> | null = null;
+    private static allSprites: Sprite[] = [];
 
     private hoveredTilePosition: TilePosition | null = null;
     private pressedTilePosition: TilePosition | null = null;
@@ -54,20 +59,26 @@ export class TowerDefenseManager {
             console.error('Error loading images:', error);
         });
 
-        for (let row = 0; row < 10; row++) {
-            TowerDefenseManager.map[row] = [];
-            for (let col = 0; col < 10; col++) {
-                TowerDefenseManager.map[row][col] = {
-                    key: 'landscape_1',
-                    name: `landscape`
-                };
-            }
-        }
+        this.map = TowerDefenseManager.createDefaultMap();
+        this.calculatePath();
+    }
 
-        TowerDefenseManager.map[0][0] = { key: 'landscape_0', name: 'spawn' };
-        TowerDefenseManager.map[9][9] = { key: 'landscape_0', name: 'goal' };
+    private static createDefaultMap(): Tile[][] {
+        const map = Array.from({ length: this.MAP_ROWS }, () =>
+            Array.from(
+                { length: this.MAP_COLS },
+                () =>
+                    ({
+                        key: 'landscape_1',
+                        name: 'landscape'
+                    }) as Tile
+            )
+        );
 
-        TowerDefenseManager.calculatePath();
+        map[0][0] = { key: 'landscape_0', name: 'spawn' };
+        map[this.MAP_ROWS - 1][this.MAP_COLS - 1] = { key: 'landscape_0', name: 'goal' };
+
+        return map;
     }
 
     private static loadImage(key: string, imageSrc: string, xmlData: string): Promise<void> {
@@ -85,83 +96,93 @@ export class TowerDefenseManager {
         });
     }
 
+    private static async loadFont(fontName: string): Promise<void> {
+        const font = new FontFace(fontName, `url(./assets/Fonts/${fontName}.ttf)`);
+        await font.load();
+        document.fonts.add(font);
+    }
+
+    static async loadFonts(): Promise<void> {
+        console.time('Load Fonts');
+        await Promise.all([TowerDefenseManager.loadFont('Magic')]);
+        console.timeEnd('Load Fonts');
+    }
+
     static async loadImages(): Promise<void> {
+        if (this.imagesLoadedPromise) {
+            return this.imagesLoadedPromise;
+        }
+
         console.time('Load Sprite Sheets');
-        await Promise.all([
+        this.imagesLoadedPromise = Promise.all([
             this.loadImage('towersRed', towersRedSheetImage, towersRedSheetXml),
             this.loadImage('towersBrown', towersBrownSheetImage, towersBrownSheetXml),
             this.loadImage('towersGrey', towersGreySheetImage, towersGreySheet),
             this.loadImage('landscape', landscapeSheetImage, landscapeSheetXml)
-        ]);
-        console.timeEnd('Load Sprite Sheets');
+        ]).then(() => {
+            this.allSprites = Object.values(this.assets).flatMap((asset) => asset.sprites);
+            console.timeEnd('Load Sprite Sheets');
+        });
+
+        return this.imagesLoadedPromise;
     }
 
     public startGame = (): void => {
         TowerDefenseManager.screen = 'game';
     };
 
-    public TitleScreen = (ctx: CanvasRenderingContext2D): void => {
+    public drawTitleScreen = (ctx: CanvasRenderingContext2D): void => {
         ctx.fillStyle = '#597f9c';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-        MapDrawer.drawMap(
-            ctx,
-            TowerDefenseManager.map,
-            Object.values(TowerDefenseManager.assets).flatMap((asset) => asset.sprites),
-            {
-                offsetX: TowerDefenseManager.mapOffset.x,
-                offsetY: TowerDefenseManager.mapOffset.y
-            }
-        );
+        MapDrawer.drawMap(ctx, this.map, TowerDefenseManager.allSprites, {
+            offsetX: TowerDefenseManager.mapOffset.x,
+            offsetY: TowerDefenseManager.mapOffset.y
+        });
     };
 
-    public gameScreen = (ctx: CanvasRenderingContext2D, _frame: CanvasFrame): void => {
+    public drawGameScreen = (ctx: CanvasRenderingContext2D, _frame: CanvasFrame): void => {
         ctx.fillStyle = '#597f9c';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     };
 
     public draw = (ctx: CanvasRenderingContext2D, frame: CanvasFrame): void => {
         if (TowerDefenseManager.screen === 'title') {
-            this.TitleScreen(ctx);
+            this.drawTitleScreen(ctx);
         } else {
-            this.gameScreen(ctx, frame);
+            this.drawGameScreen(ctx, frame);
         }
     };
 
-    private static getNeighboringTiles(point: Point): Neighbors {
+    private getNeighboringTiles(point: Point): Neighbors {
         const neighbors: Neighbors = {};
-        const directions: Point[] = [
-            { x: 0, y: -1 },
-            { x: 0, y: 1 },
-            { x: -1, y: 0 },
-            { x: 1, y: 0 }
-        ];
 
-        for (const direction of directions) {
+        for (const direction of DIRECTIONS) {
             const neighborX = point.x + direction.x;
             const neighborY = point.y + direction.y;
 
             if (
                 neighborX >= 0 &&
-                neighborX < TowerDefenseManager.map[0].length &&
+                neighborX < this.map[0].length &&
                 neighborY >= 0 &&
-                neighborY < TowerDefenseManager.map.length
+                neighborY < this.map.length
             ) {
                 if (direction.x === 0 && direction.y === -1) {
-                    neighbors.up = TowerDefenseManager.map[neighborY][neighborX];
+                    neighbors.up = this.map[neighborY][neighborX];
                 } else if (direction.x === 0 && direction.y === 1) {
-                    neighbors.down = TowerDefenseManager.map[neighborY][neighborX];
+                    neighbors.down = this.map[neighborY][neighborX];
                 } else if (direction.x === -1 && direction.y === 0) {
-                    neighbors.left = TowerDefenseManager.map[neighborY][neighborX];
+                    neighbors.left = this.map[neighborY][neighborX];
                 } else if (direction.x === 1 && direction.y === 0) {
-                    neighbors.right = TowerDefenseManager.map[neighborY][neighborX];
+                    neighbors.right = this.map[neighborY][neighborX];
                 }
             }
         }
 
         for (const neighbor in neighbors) {
             if (
-                !TowerDefenseManager.isWalkableTile(neighbors[neighbor as keyof Neighbors] as Tile)
+                !this.isWalkableTile(neighbors[neighbor as keyof Neighbors] as Tile) ||
+                !this.isPathConnector(neighbors[neighbor as keyof Neighbors] as Tile)
             ) {
                 delete neighbors[neighbor as keyof Neighbors];
             }
@@ -170,26 +191,18 @@ export class TowerDefenseManager {
         return neighbors;
     }
 
-    private static calculatePath(): boolean {
-        TowerDefenseManager.clearCalculatedPath();
+    private calculatePath(): boolean {
+        this.clearCalculatedPath();
 
-        const start = TowerDefenseManager.findTilePositionByName('spawn');
-        const goal = TowerDefenseManager.findTilePositionByName('goal');
+        const start = this.findTilePositionByName('spawn');
+        const goal = this.findTilePositionByName('goal');
 
         if (!start || !goal) {
             console.error('Spawn or goal tile not found!');
             return false;
         }
 
-        // Pre-calculate distance to goal for all tiles
-        for (let y = 0; y < TowerDefenseManager.map.length; y++) {
-            for (let x = 0; x < TowerDefenseManager.map[y].length; x++) {
-                const tile = TowerDefenseManager.map[y][x];
-                tile.distanceToGoal = Math.abs(goal.x - x) + Math.abs(goal.y - y);
-            }
-        }
-
-        const path = TowerDefenseManager.findPathAStar(start, goal);
+        const path = this.findPathAStar(start, goal);
         if (!path) {
             console.error('No path found from spawn to goal!');
             return false;
@@ -197,51 +210,46 @@ export class TowerDefenseManager {
 
         // Set the tiles along the path to have a "path" name, which will be used for rendering the correct sprite
         for (const point of path) {
-            const tile = TowerDefenseManager.map[point.y][point.x];
+            const tile = this.map[point.y][point.x];
             if (tile.name !== 'spawn' && tile.name !== 'goal') tile.name = 'path';
         }
 
-        TowerDefenseManager.applyCalculatedPath(path);
+        this.applyCalculatedPath(path);
         return true;
     }
 
-    private static findPathAStar(start: Point, goal: Point): Point[] | null {
+    private findPathAStar(start: Point, goal: Point): Point[] | null {
         const openSet: Point[] = [start];
+        const openSetKeys = new Set<string>([this.getPointKey(start)]);
         const cameFrom = new Map<string, Point>();
-        const gScore = new Map<string, number>([[TowerDefenseManager.getPointKey(start), 0]]);
+        const gScore = new Map<string, number>([[this.getPointKey(start), 0]]);
         const fScore = new Map<string, number>([
-            [TowerDefenseManager.getPointKey(start), TowerDefenseManager.getDistance(start, goal)]
+            [this.getPointKey(start), this.getDistance(start, goal)]
         ]);
 
         while (openSet.length > 0) {
-            const current = TowerDefenseManager.getLowestScorePoint(openSet, fScore);
+            const current = this.getLowestScorePoint(openSet, fScore);
 
             if (current.x === goal.x && current.y === goal.y) {
-                return TowerDefenseManager.reconstructPath(cameFrom, current);
+                return this.reconstructPath(cameFrom, current);
             }
 
+            const currentKey = this.getPointKey(current);
             openSet.splice(openSet.indexOf(current), 1);
-
-            for (const neighbor of TowerDefenseManager.getNeighboringPoints(current)) {
-                const currentScore =
-                    gScore.get(TowerDefenseManager.getPointKey(current)) ?? Infinity;
+            openSetKeys.delete(currentKey);
+            for (const neighbor of this.getNeighboringPoints(current)) {
+                const currentScore = gScore.get(currentKey) ?? Infinity;
                 const tentativeScore = currentScore + 1;
-                const neighborKey = TowerDefenseManager.getPointKey(neighbor);
+                const neighborKey = this.getPointKey(neighbor);
 
                 if (tentativeScore < (gScore.get(neighborKey) ?? Infinity)) {
                     cameFrom.set(neighborKey, current);
                     gScore.set(neighborKey, tentativeScore);
-                    fScore.set(
-                        neighborKey,
-                        tentativeScore + TowerDefenseManager.getDistance(neighbor, goal)
-                    );
+                    fScore.set(neighborKey, tentativeScore + this.getDistance(neighbor, goal));
 
-                    if (
-                        !openSet.some(
-                            (openPoint) => openPoint.x === neighbor.x && openPoint.y === neighbor.y
-                        )
-                    ) {
+                    if (!openSetKeys.has(neighborKey)) {
                         openSet.push(neighbor);
+                        openSetKeys.add(neighborKey);
                     }
                 }
             }
@@ -250,16 +258,10 @@ export class TowerDefenseManager {
         return null;
     }
 
-    private static getNeighboringPoints(point: Point): Point[] {
+    private getNeighboringPoints(point: Point): Point[] {
         const neighbors: Point[] = [];
-        const directions: Point[] = [
-            { x: 0, y: -1 },
-            { x: 0, y: 1 },
-            { x: -1, y: 0 },
-            { x: 1, y: 0 }
-        ];
 
-        for (const direction of directions) {
+        for (const direction of DIRECTIONS) {
             const neighbor: Point = {
                 x: point.x + direction.x,
                 y: point.y + direction.y
@@ -267,10 +269,10 @@ export class TowerDefenseManager {
 
             if (
                 neighbor.x >= 0 &&
-                neighbor.x < TowerDefenseManager.map[0].length &&
+                neighbor.x < this.map[0].length &&
                 neighbor.y >= 0 &&
-                neighbor.y < TowerDefenseManager.map.length &&
-                TowerDefenseManager.isWalkableTile(TowerDefenseManager.map[neighbor.y][neighbor.x])
+                neighbor.y < this.map.length &&
+                this.isWalkableTile(this.map[neighbor.y][neighbor.x])
             ) {
                 neighbors.push(neighbor);
             }
@@ -279,37 +281,37 @@ export class TowerDefenseManager {
         return neighbors;
     }
 
-    private static getLowestScorePoint(points: Point[], scores: Map<string, number>): Point {
+    private getLowestScorePoint(points: Point[], scores: Map<string, number>): Point {
         return points.reduce((bestPoint, point) => {
-            const bestScore = scores.get(TowerDefenseManager.getPointKey(bestPoint)) ?? Infinity;
-            const pointScore = scores.get(TowerDefenseManager.getPointKey(point)) ?? Infinity;
+            const bestScore = scores.get(this.getPointKey(bestPoint)) ?? Infinity;
+            const pointScore = scores.get(this.getPointKey(point)) ?? Infinity;
 
             return pointScore < bestScore ? point : bestPoint;
         });
     }
 
-    private static reconstructPath(cameFrom: Map<string, Point>, current: Point): Point[] {
+    private reconstructPath(cameFrom: Map<string, Point>, current: Point): Point[] {
         const path = [current];
-        let currentKey = TowerDefenseManager.getPointKey(current);
+        let currentKey = this.getPointKey(current);
 
         while (cameFrom.has(currentKey)) {
             current = cameFrom.get(currentKey) as Point;
-            currentKey = TowerDefenseManager.getPointKey(current);
+            currentKey = this.getPointKey(current);
             path.unshift(current);
         }
 
         return path;
     }
 
-    private static getDistance(a: Point, b: Point): number {
+    private getDistance(a: Point, b: Point): number {
         return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
     }
 
-    private static getPointKey(point: Point): string {
+    private getPointKey(point: Point): string {
         return `${point.x},${point.y}`;
     }
 
-    private static isWalkableTile(tile: Tile): boolean {
+    private isWalkableTile(tile: Tile): boolean {
         return (
             !tile.key.startsWith('tree_') &&
             !tile.key.startsWith('rock_') &&
@@ -318,10 +320,10 @@ export class TowerDefenseManager {
         );
     }
 
-    private static findTilePositionByName(name: string): Point | null {
-        for (let y = 0; y < TowerDefenseManager.map.length; y++) {
-            for (let x = 0; x < TowerDefenseManager.map[y].length; x++) {
-                if (TowerDefenseManager.map[y][x].name === name) {
+    private findTilePositionByName(name: string): Point | null {
+        for (let y = 0; y < this.map.length; y++) {
+            for (let x = 0; x < this.map[y].length; x++) {
+                if (this.map[y][x].name === name) {
                     return { x, y };
                 }
             }
@@ -330,61 +332,62 @@ export class TowerDefenseManager {
         return null;
     }
 
-    private static applyCalculatedPath(path: Point[]): void {
+    private getPathKeyFromConnections(
+        up: boolean,
+        down: boolean,
+        left: boolean,
+        right: boolean
+    ): Tile['key'] {
+        const mask = (up ? 1 : 0) | (right ? 2 : 0) | (down ? 4 : 0) | (left ? 8 : 0);
+
+        const pathKeys: Partial<Record<number, Tile['key']>> = {
+            // Corners
+            [1 | 2]: 'path_11', // up + right
+            [2 | 4]: 'path_12', // right + down
+            [4 | 8]: 'path_13', // down + left
+            [1 | 8]: 'path_14', // up + left
+
+            // Straights
+            [1 | 4]: 'path_15', // up + down
+            [2 | 8]: 'path_16', // right + left
+
+            // T shapes
+            [1 | 4 | 8]: 'path_7', // up + down + left
+            [1 | 2 | 4]: 'path_5', // up + right + down
+            [1 | 2 | 8]: 'path_4', // up + right + left
+            [2 | 4 | 8]: 'path_6', // right + down + left
+
+            // All way
+            [1 | 2 | 4 | 8]: 'path_10' // up + right + down + left
+        };
+
+        return pathKeys[mask] || 'path_15'; // Default to straight if something goes wrong
+    }
+
+    private applyCalculatedPath(path: Point[]): void {
         for (const point of path) {
-            const tile = TowerDefenseManager.map[point.y][point.x];
-            if (tile.name !== 'spawn' && tile.name !== 'goal') {
-                const n: Neighbors = this.getNeighboringTiles(point);
+            const tile = this.map[point.y][point.x];
+            if (tile.name !== 'path') continue;
 
-                const up = TowerDefenseManager.isPathConnector(n.up);
-                const down = TowerDefenseManager.isPathConnector(n.down);
-                const left = TowerDefenseManager.isPathConnector(n.left);
-                const right = TowerDefenseManager.isPathConnector(n.right);
+            const { up, down, left, right } = this.getNeighboringTiles(point);
 
-                //  if (up && left && down) {
-                //     // T shapes
-                //     // Up, left, down : path_7
-                //     // Up, right, down: path_5
-                //     // Up, left, right: path_4
-                //     // Down, left, right: path_6
-                //     tile.key = 'path_7';
-                // }
-
-                // All Way
-                // Up, down, left, right: path_10
-                if (up && down && left && right) {
-                    tile.key = 'path_10';
-                }
-
-                // Corners
-                if (up && right) {
-                    tile.key = 'path_11';
-                } else if (down && right) {
-                    tile.key = 'path_12';
-                } else if (left && down) {
-                    tile.key = 'path_13';
-                } else if (up && left) {
-                    tile.key = 'path_14';
-                }
-
-                // Straights
-                else if (up && down) {
-                    tile.key = 'path_15';
-                } else if (left && right) {
-                    tile.key = 'path_16';
-                }
-            }
+            tile.key = this.getPathKeyFromConnections(
+                Boolean(up),
+                Boolean(down),
+                Boolean(left),
+                Boolean(right)
+            );
         }
     }
 
-    private static isPathConnector(tile: Tile | undefined): boolean {
+    private isPathConnector(tile: Tile | undefined): boolean {
         return tile?.name === 'path' || tile?.name === 'spawn' || tile?.name === 'goal';
     }
 
-    private static clearCalculatedPath(): void {
-        for (let y = 0; y < TowerDefenseManager.map.length; y++) {
-            for (let x = 0; x < TowerDefenseManager.map[y].length; x++) {
-                const tile = TowerDefenseManager.map[y][x];
+    private clearCalculatedPath(): void {
+        for (let y = 0; y < this.map.length; y++) {
+            for (let x = 0; x < this.map[y].length; x++) {
+                const tile = this.map[y][x];
                 if (tile.name === 'path') {
                     tile.name = 'landscape';
                     tile.key = 'landscape_1';
@@ -435,13 +438,20 @@ export class TowerDefenseManager {
             name: tile.name
         };
 
-        tile.key = `rock_${Math.floor(Math.random() * 7)}` as Tile['key'];
-        tile.name = 'rock';
+        if (Math.random() < 0.5) {
+            tile.key = `tree_${Math.floor(Math.random() * 11)}` as Tile['key'];
+            tile.name = 'tree';
+        } else {
+            tile.key = `rock_${Math.floor(Math.random() * 8)}` as Tile['key'];
+            tile.name = 'rock';
+        }
+        // tile.key = 'tower_00';
+        // tile.name = 'tower';
 
-        if (!TowerDefenseManager.calculatePath()) {
+        if (!this.calculatePath()) {
             tile.key = previousTile.key;
             tile.name = previousTile.name;
-            TowerDefenseManager.calculatePath();
+            this.calculatePath();
         }
     }
 
@@ -491,56 +501,58 @@ export class TowerDefenseManager {
     }
 
     private setHoveredTilePosition(position: TilePosition | null): void {
-        if (this.areTilePositionsEqual(this.hoveredTilePosition, position)) {
-            return;
-        }
-
-        const previousTile = this.getTileAtPosition(this.hoveredTilePosition);
-        if (previousTile) {
-            previousTile.isHovered = false;
-        }
-
-        this.hoveredTilePosition = position;
-
-        const nextTile = this.getTileAtPosition(position);
-        if (nextTile) {
-            nextTile.isHovered = true;
-        }
+        this.hoveredTilePosition = this.setTileFlag(
+            this.hoveredTilePosition,
+            position,
+            'isHovered'
+        );
     }
 
     private setPressedTilePosition(position: TilePosition | null): void {
-        if (this.areTilePositionsEqual(this.pressedTilePosition, position)) {
-            return;
-        }
-
-        const previousTile = this.getTileAtPosition(this.pressedTilePosition);
-        if (previousTile) {
-            previousTile.isPressed = false;
-        }
-
-        this.pressedTilePosition = position;
-
-        const nextTile = this.getTileAtPosition(position);
-        if (nextTile) {
-            nextTile.isPressed = true;
-        }
+        this.pressedTilePosition = this.setTileFlag(
+            this.pressedTilePosition,
+            position,
+            'isPressed'
+        );
     }
 
     private getTileAtPosition(position: TilePosition | null): Tile | null {
         if (
             !position ||
             position.row < 0 ||
-            position.row >= TowerDefenseManager.map.length ||
+            position.row >= this.map.length ||
             position.col < 0 ||
-            position.col >= TowerDefenseManager.map[position.row].length
+            position.col >= this.map[position.row].length
         ) {
             return null;
         }
 
-        return TowerDefenseManager.map[position.row][position.col];
+        return this.map[position.row][position.col];
     }
 
     private areTilePositionsEqual(left: TilePosition | null, right: TilePosition | null): boolean {
         return left?.row === right?.row && left?.col === right?.col;
+    }
+
+    private setTileFlag(
+        currentPosition: TilePosition | null,
+        nextPosition: TilePosition | null,
+        flag: 'isHovered' | 'isPressed'
+    ): TilePosition | null {
+        if (this.areTilePositionsEqual(currentPosition, nextPosition)) {
+            return currentPosition;
+        }
+
+        const previousTile = this.getTileAtPosition(currentPosition);
+        if (previousTile) {
+            previousTile[flag] = false;
+        }
+
+        const nextTile = this.getTileAtPosition(nextPosition);
+        if (nextTile) {
+            nextTile[flag] = true;
+        }
+
+        return nextPosition;
     }
 }
