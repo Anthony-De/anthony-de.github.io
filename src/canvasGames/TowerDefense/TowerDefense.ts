@@ -1,24 +1,13 @@
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../../constants';
-import type { CanvasFrame, Neighbors, Sprite, Tile } from './types';
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import type { CanvasFrame, Neighbors, Sprite, Tile, Vec2, CanvasMouseEvent } from './types';
 import { ResourceManager } from '../../utils/ResourceManager';
 
 import { MapDrawer } from './drawMap';
 import { DEFAULT_TILE_KEY, DIRECTIONS, TILE_SIZE } from './constants';
 
-type CanvasMouseEvent = ReactMouseEvent<HTMLCanvasElement>;
-type TilePosition = {
-    row: number;
-    col: number;
-};
-type Point = {
-    x: number;
-    y: number;
-};
-
 export class TowerDefenseManager {
-    private hoveredTilePosition: TilePosition | null = null;
-    private pressedTilePosition: TilePosition | null = null;
+    private hoveredTilePosition: Vec2 | null = null;
+    private pressedTilePosition: Vec2 | null = null;
 
     private static readonly MAP_ROWS = 10;
     private static readonly MAP_COLS = 10;
@@ -118,7 +107,7 @@ export class TowerDefenseManager {
         }
     };
 
-    private getNeighboringTiles(point: Point): Neighbors {
+    private getNeighboringTiles(point: Vec2): Neighbors {
         const neighbors: Neighbors = {};
 
         for (const direction of DIRECTIONS) {
@@ -144,10 +133,7 @@ export class TowerDefenseManager {
         }
 
         for (const neighbor in neighbors) {
-            if (
-                !this.isWalkableTile(neighbors[neighbor as keyof Neighbors] as Tile) ||
-                !this.isPathConnector(neighbors[neighbor as keyof Neighbors] as Tile)
-            ) {
+            if (!this.isPathConnector(neighbors[neighbor as keyof Neighbors] as Tile)) {
                 delete neighbors[neighbor as keyof Neighbors];
             }
         }
@@ -182,10 +168,10 @@ export class TowerDefenseManager {
         return true;
     }
 
-    private findPathAStar(start: Point, goal: Point): Point[] | null {
-        const openSet: Point[] = [start];
+    private findPathAStar(start: Vec2, goal: Vec2): Vec2[] | null {
+        const openSet: Vec2[] = [start];
         const openSetKeys = new Set<string>([this.getPointKey(start)]);
-        const cameFrom = new Map<string, Point>();
+        const cameFrom = new Map<string, Vec2>();
         const gScore = new Map<string, number>([[this.getPointKey(start), 0]]);
         const fScore = new Map<string, number>([
             [this.getPointKey(start), this.getDistance(start, goal)]
@@ -222,11 +208,11 @@ export class TowerDefenseManager {
         return null;
     }
 
-    private getNeighboringPoints(point: Point): Point[] {
-        const neighbors: Point[] = [];
+    private getNeighboringPoints(point: Vec2): Vec2[] {
+        const neighbors: Vec2[] = [];
 
         for (const direction of DIRECTIONS) {
-            const neighbor: Point = {
+            const neighbor: Vec2 = {
                 x: point.x + direction.x,
                 y: point.y + direction.y
             };
@@ -245,7 +231,7 @@ export class TowerDefenseManager {
         return neighbors;
     }
 
-    private getLowestScorePoint(points: Point[], scores: Map<string, number>): Point {
+    private getLowestScorePoint(points: Vec2[], scores: Map<string, number>): Vec2 {
         return points.reduce((bestPoint, point) => {
             const bestScore = scores.get(this.getPointKey(bestPoint)) ?? Infinity;
             const pointScore = scores.get(this.getPointKey(point)) ?? Infinity;
@@ -254,12 +240,12 @@ export class TowerDefenseManager {
         });
     }
 
-    private reconstructPath(cameFrom: Map<string, Point>, current: Point): Point[] {
+    private reconstructPath(cameFrom: Map<string, Vec2>, current: Vec2): Vec2[] {
         const path = [current];
         let currentKey = this.getPointKey(current);
 
         while (cameFrom.has(currentKey)) {
-            current = cameFrom.get(currentKey) as Point;
+            current = cameFrom.get(currentKey) as Vec2;
             currentKey = this.getPointKey(current);
             path.unshift(current);
         }
@@ -267,24 +253,21 @@ export class TowerDefenseManager {
         return path;
     }
 
-    private getDistance(a: Point, b: Point): number {
+    private getDistance(a: Vec2, b: Vec2): number {
         return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
     }
 
-    private getPointKey(point: Point): string {
+    private getPointKey(point: Vec2): string {
         return `${point.x},${point.y}`;
     }
 
     private isWalkableTile(tile: Tile): boolean {
-        return (
-            !tile.key[0].startsWith('trees_') &&
-            !tile.key[0].startsWith('rocks_') &&
-            !tile.key[0].startsWith('crystals_') &&
-            !tile.key[0].startsWith('tower_')
+        return tile.key.some(
+            (key) => key.startsWith('path_') || key.startsWith('grass_') || key.startsWith('water_')
         );
     }
 
-    private findTilePositionByName(name: string): Point | null {
+    private findTilePositionByName(name: string): Vec2 | null {
         for (let y = 0; y < this.map.length; y++) {
             for (let x = 0; x < this.map[y].length; x++) {
                 if (this.map[y][x].name === name) {
@@ -328,7 +311,7 @@ export class TowerDefenseManager {
         return pathKeys[mask] || ['path_0']; // Default to straight if something goes wrong
     }
 
-    private applyCalculatedPath(path: Point[]): void {
+    private applyCalculatedPath(path: Vec2[]): void {
         for (const point of path) {
             const tile = this.map[point.y][point.x];
             if (tile.name !== 'path') continue;
@@ -366,7 +349,7 @@ export class TowerDefenseManager {
 
         if (hit) {
             console.log(
-                `Mouse down on tile: ${hit.tile.name} at (${hit.position.col}, ${hit.position.row})`
+                `Mouse down on tile: ${hit.tile.name} at (${hit.position.x}, ${hit.position.y})`
             );
         }
     }
@@ -382,7 +365,7 @@ export class TowerDefenseManager {
 
         if (hit && this.areTilePositionsEqual(pressedPosition, hit.position)) {
             console.log(
-                `Mouse up on tile: ${hit.tile.name} at (${hit.position.col}, ${hit.position.row})`
+                `Mouse up on tile: ${hit.tile.name} at (${hit.position.x}, ${hit.position.y})`
             );
         }
 
@@ -440,14 +423,12 @@ export class TowerDefenseManager {
         return { worldX, worldY };
     }
 
-    private getTileFromMouseEvent(
-        event: CanvasMouseEvent
-    ): { position: TilePosition; tile: Tile } | null {
+    private getTileFromMouseEvent(event: CanvasMouseEvent): { position: Vec2; tile: Tile } | null {
         const { x, y } = this.getCanvasMousePosition(event);
         const { worldX, worldY } = this.screenToWorldCoordinates(x, y);
         const position = {
-            row: Math.floor(worldY),
-            col: Math.floor(worldX)
+            x: Math.floor(worldY),
+            y: Math.floor(worldX)
         };
         const tile = this.getTileAtPosition(position);
 
@@ -464,7 +445,7 @@ export class TowerDefenseManager {
         };
     }
 
-    private setHoveredTilePosition(position: TilePosition | null): void {
+    private setHoveredTilePosition(position: Vec2 | null): void {
         this.hoveredTilePosition = this.setTileFlag(
             this.hoveredTilePosition,
             position,
@@ -472,7 +453,7 @@ export class TowerDefenseManager {
         );
     }
 
-    private setPressedTilePosition(position: TilePosition | null): void {
+    private setPressedTilePosition(position: Vec2 | null): void {
         this.pressedTilePosition = this.setTileFlag(
             this.pressedTilePosition,
             position,
@@ -480,29 +461,29 @@ export class TowerDefenseManager {
         );
     }
 
-    private getTileAtPosition(position: TilePosition | null): Tile | null {
+    private getTileAtPosition(position: Vec2 | null): Tile | null {
         if (
             !position ||
-            position.row < 0 ||
-            position.row >= this.map.length ||
-            position.col < 0 ||
-            position.col >= this.map[position.row].length
+            position.x < 0 ||
+            position.x >= this.map.length ||
+            position.y < 0 ||
+            position.y >= this.map[position.x].length
         ) {
             return null;
         }
 
-        return this.map[position.row][position.col];
+        return this.map[position.x][position.y];
     }
 
-    private areTilePositionsEqual(left: TilePosition | null, right: TilePosition | null): boolean {
-        return left?.row === right?.row && left?.col === right?.col;
+    private areTilePositionsEqual(left: Vec2 | null, right: Vec2 | null): boolean {
+        return left?.x === right?.x && left?.y === right?.y;
     }
 
     private setTileFlag(
-        currentPosition: TilePosition | null,
-        nextPosition: TilePosition | null,
+        currentPosition: Vec2 | null,
+        nextPosition: Vec2 | null,
         flag: 'isHovered' | 'isPressed'
-    ): TilePosition | null {
+    ): Vec2 | null {
         if (this.areTilePositionsEqual(currentPosition, nextPosition)) {
             return currentPosition;
         }

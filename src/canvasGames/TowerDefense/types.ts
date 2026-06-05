@@ -111,3 +111,11 @@ export interface Neighbors {
     left?: Tile;
     right?: Tile;
 }
+
+import type { MouseEvent as ReactMouseEvent } from 'react';
+
+export type CanvasMouseEvent = ReactMouseEvent<HTMLCanvasElement>;
+export type Vec2 = {
+    x: number;
+    y: number;
+};
