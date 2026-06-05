@@ -74,12 +74,7 @@ export class TowerDefenseManager {
         map[0][0] = { key: ['grass_3'], name: 'spawn' };
         map[this.MAP_ROWS - 1][this.MAP_COLS - 1] = { key: ['grass_3'], name: 'goal' };
         map[5][9] = {
-            key: [
-                'grass_3',
-                'tower_red_base_wide_0',
-                'tower_red_mid_9',
-                'tower_red_top_open_pyramid_grass_0'
-            ],
+            key: ['grass_3', 'tower_red_base_wall_2', 'tower_red_mid_3', 'tower_red_top_open_0'],
             name: 'tower'
         };
 
