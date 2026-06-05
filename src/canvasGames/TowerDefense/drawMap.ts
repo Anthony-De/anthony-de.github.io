@@ -15,7 +15,7 @@ export class MapDrawer {
             showTileOrigins = false,
             showGrid = false,
             showDistanceToGoal = false,
-            showTileKeys = false,
+            showKeys = false,
             showTileNames = false
         } = config ?? {};
 
@@ -41,7 +41,7 @@ export class MapDrawer {
         }
 
         // Draw 2.5D grid for debugging.
-        if (showGrid || showTileCoords || showDistanceToGoal || showTileKeys || showTileNames) {
+        if (showGrid || showTileCoords || showDistanceToGoal || showKeys || showTileNames) {
             for (let row = 0; row < tiles.length; row++) {
                 for (let col = 0; col < tiles[row].length; col++) {
                     const x = (col - row) * (TILE_SIZE / 2) + offsetX;
@@ -76,7 +76,7 @@ export class MapDrawer {
                         ctx.fillText(`${tile.distanceToGoal}`, x, y + TILE_SIZE / 4);
                     }
 
-                    if (showTileKeys) {
+                    if (showKeys) {
                         const tile = tiles[row][col];
 
                         ctx.font = '10px MONOSPACE';

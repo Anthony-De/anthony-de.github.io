@@ -1,3 +1,5 @@
+import { SpriteKey } from './types';
+
 export const TILE_SIZE = 75;
 
 export const DIRECTIONS: { key: string; x: number; y: number }[] = [
@@ -6,3 +8,5 @@ export const DIRECTIONS: { key: string; x: number; y: number }[] = [
     { key: 'left', x: -1, y: 0 },
     { key: 'right', x: 1, y: 0 }
 ];
+
+export const DEFAULT_TILE_KEY: SpriteKey = 'grass_2';

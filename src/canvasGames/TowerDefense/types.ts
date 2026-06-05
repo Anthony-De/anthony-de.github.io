@@ -17,16 +17,38 @@ type WaterKeys = WaterCurveKey | WaterKey;
 
 export type GroundTileKey = PathKeys | GrassKeys | WaterKeys;
 
-export type TreeKey = `trees_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11}`;
-export type RockKey = `rocks_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7}`;
-export type CrystalKey = `crystals_${0 | 1 | 2 | 3}`;
+type TreeKey = `trees_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11}`;
+type RockKey = `rocks_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7}`;
+type CrystalKey = `crystals_${0 | 1 | 2 | 3}`;
 export type DecorationKey = TreeKey | RockKey | CrystalKey;
-// export type TowerBaseKey = `tower_base_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
-// export type TowerMidKey = `tower_mid_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
-// export type TowerTopKey = `tower_top_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
-// export type TowerPartKey = TowerBaseKey | TowerMidKey | TowerTopKey;
-export type TileKey = GroundTileKey | DecorationKey; // | TowerPartKey;
-export type SpriteKey = GroundTileKey | DecorationKey; // | TowerPartKey;
+
+type TowerColors = 'red';
+
+// Tower Variants:
+type ZeroTo1 = 0 | 1;
+type ZeroTo2 = ZeroTo1 | 2;
+type ZeroTo3 = ZeroTo2 | 3;
+type ZeroTo5 = ZeroTo3 | 4 | 5;
+type ZeroTo7 = ZeroTo5 | 6 | 7;
+type ZeroTo14 = ZeroTo7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
+
+type TowerKey<
+    Part extends 'base' | 'mid' | 'top',
+    Variant extends string | number
+> = `tower_${TowerColors}_${Part}_${Variant}`;
+
+type WideVariant = `high_${ZeroTo5}` | `low_${ZeroTo1}` | ZeroTo1;
+type BaseVariant = `inset_${ZeroTo3}` | `wall_${ZeroTo7}` | `wide_${WideVariant}` | ZeroTo2;
+type TowerBaseKey = TowerKey<'base', BaseVariant>;
+
+type TowerMidKey = TowerKey<'mid', ZeroTo14>;
+
+type OpenVariant = `open_${`pyramid_${`grass_${ZeroTo2}` | `stone_${ZeroTo2}`}` | ZeroTo2}`;
+type ClosedVariant = `closed_${`short_4${ZeroTo1}` | `tall_${ZeroTo1}` | ZeroTo1}`;
+type TopVariant = OpenVariant | ClosedVariant;
+type TowerTopKey = TowerKey<'top', TopVariant>;
+type TowerPartKey = TowerBaseKey | TowerMidKey | TowerTopKey;
+export type SpriteKey = GroundTileKey | DecorationKey | TowerPartKey;
 
 export type Decoration = {
     sprite: DecorationKey;
@@ -71,12 +93,12 @@ export type MapDrawConfig = {
     showTileNames?: boolean;
     showGrid?: boolean;
     showDistanceToGoal?: boolean;
-    showTileKeys?: boolean;
+    showKeys?: boolean;
 };
 
 export interface Tile {
     name: string;
-    key: TileKey[];
+    key: SpriteKey[];
     distanceToGoal?: number;
     selectable?: boolean;
     isHovered?: boolean;

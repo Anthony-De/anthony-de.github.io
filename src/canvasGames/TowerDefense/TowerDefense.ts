@@ -4,7 +4,7 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 import { ResourceManager } from '../../utils/ResourceManager';
 
 import { MapDrawer } from './drawMap';
-import { DIRECTIONS, TILE_SIZE } from './constants';
+import { DEFAULT_TILE_KEY, DIRECTIONS, TILE_SIZE } from './constants';
 
 type CanvasMouseEvent = ReactMouseEvent<HTMLCanvasElement>;
 type TilePosition = {
@@ -35,7 +35,7 @@ export class TowerDefenseManager {
 
     constructor() {
         this.map = TowerDefenseManager.createDefaultMap();
-        // this.calculatePath();
+        this.calculatePath();
     }
 
     public async loadAssets(): Promise<void> {
@@ -65,33 +65,26 @@ export class TowerDefenseManager {
                 { length: this.MAP_COLS },
                 () =>
                     ({
-                        key: ['grass_1'],
+                        key: [DEFAULT_TILE_KEY],
                         name: 'grass'
                     }) as Tile
             )
         );
 
-        // map[0][0] = { key: ['landscape_0'], name: 'spawn' };
-        // map[this.MAP_ROWS - 1][this.MAP_COLS - 1] = { key: ['landscape_0'], name: 'goal' };
-        // map[5][5] = { key: ['tower_base_0', 'tower_mid_0', 'tower_top_0'], name: 'tower' };
+        map[0][0] = { key: ['grass_3'], name: 'spawn' };
+        map[this.MAP_ROWS - 1][this.MAP_COLS - 1] = { key: ['grass_3'], name: 'goal' };
+        map[5][9] = {
+            key: [
+                'grass_3',
+                'tower_red_base_wide_0',
+                'tower_red_mid_9',
+                'tower_red_top_open_pyramid_grass_0'
+            ],
+            name: 'tower'
+        };
 
         return map;
     }
-
-    // private static loadImage(key: string, imageSrc: string, xmlData: string): Promise<void> {
-    //     return new Promise((resolve, reject) => {
-    //         this.assets[key].image.onload = () => {
-    //             this.assets[key].sprites = ImageProcessing.extractSpritesFromSheet(
-    //                 this.assets[key].image,
-    //                 xmlData
-    //             );
-    //             resolve();
-    //         };
-    //         this.assets[key].image.onerror = () =>
-    //             reject(new Error(`Failed to load ${key} sprite sheet`));
-    //         this.assets[key].image.src = imageSrc;
-    //     });
-    // }
 
     private static async loadFont(fontName: string): Promise<void> {
         const font = new FontFace(fontName, `url(./assets/Fonts/${fontName}.ttf)`);
@@ -366,7 +359,7 @@ export class TowerDefenseManager {
                 const tile = this.map[y][x];
                 if (tile.name === 'path') {
                     tile.name = 'grass';
-                    tile.key = ['grass_1'];
+                    tile.key = [DEFAULT_TILE_KEY];
                 }
             }
         }
