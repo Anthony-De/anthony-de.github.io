@@ -277,9 +277,9 @@ export class TowerDefenseManager {
 
     private isWalkableTile(tile: Tile): boolean {
         return (
-            !tile.key[0].startsWith('tree_') &&
-            !tile.key[0].startsWith('rock_') &&
-            !tile.key[0].startsWith('crystal_') &&
+            !tile.key[0].startsWith('trees_') &&
+            !tile.key[0].startsWith('rocks_') &&
+            !tile.key[0].startsWith('crystals_') &&
             !tile.key[0].startsWith('tower_')
         );
     }
