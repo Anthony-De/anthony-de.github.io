@@ -22,11 +22,12 @@ export class TowerDefenseManager {
 
     private static readonly MAP_ROWS = 10;
     private static readonly MAP_COLS = 10;
-    private allSprites: Sprite[] = [];
+
     private static readonly mapOffset = {
         x: CANVAS_WIDTH / 2,
         y: CANVAS_HEIGHT / 4
     };
+    public allSprites: Sprite[] = [];
     public map: Tile[][] = [];
     public static screen: 'title' | 'game' = 'title';
 
@@ -49,7 +50,13 @@ export class TowerDefenseManager {
             import: 'default'
         }) as Record<string, string>;
 
-        Promise.all([ResourceManager.loadFonts(fontUrls), ResourceManager.loadImages(imagesUrls)]);
+        const [, sprites] = await Promise.all([
+            ResourceManager.loadFonts(fontUrls),
+            ResourceManager.loadImages(imagesUrls)
+        ]);
+
+        this.allSprites = sprites;
+        this.assetsLoaded = true;
     }
 
     private static createDefaultMap(): Tile[][] {
@@ -58,8 +65,8 @@ export class TowerDefenseManager {
                 { length: this.MAP_COLS },
                 () =>
                     ({
-                        key: ['landscape_1'],
-                        name: 'landscape'
+                        key: ['grass_1'],
+                        name: 'grass'
                     }) as Tile
             )
         );
@@ -311,26 +318,26 @@ export class TowerDefenseManager {
 
         const pathKeys: Partial<Record<number, Tile['key']>> = {
             // Corners
-            [1 | 2]: ['path_11'], // up + right
-            [2 | 4]: ['path_12'], // right + down
-            [4 | 8]: ['path_13'], // down + left
-            [1 | 8]: ['path_14'], // up + left
+            [1 | 2]: ['path_turn_0'], // up + right
+            [2 | 4]: ['path_turn_1'], // right + down
+            [4 | 8]: ['path_turn_2'], // down + left
+            [1 | 8]: ['path_turn_3'], // up + left
 
             // Straights
-            [1 | 4]: ['path_15'], // up + down
-            [2 | 8]: ['path_16'], // right + left
+            [1 | 4]: ['path_0'], // up + down
+            [2 | 8]: ['path_1'], // right + left
 
             // T shapes
-            [1 | 4 | 8]: ['path_7'], // up + down + left
-            [1 | 2 | 4]: ['path_5'], // up + right + down
-            [1 | 2 | 8]: ['path_4'], // up + right + left
-            [2 | 4 | 8]: ['path_6'], // right + down + left
+            [1 | 2 | 4]: ['path_t_0'], // up + right + down
+            [2 | 4 | 8]: ['path_t_1'], // right + down + left
+            [1 | 4 | 8]: ['path_t_2'], // up + down + left
+            [1 | 2 | 8]: ['path_t_3'], // up + right + left
 
             // All way
-            [1 | 2 | 4 | 8]: ['path_10'] // up + right + down + left
+            [1 | 2 | 4 | 8]: ['path_2'] // up + right + down + left
         };
 
-        return pathKeys[mask] || ['path_15']; // Default to straight if something goes wrong
+        return pathKeys[mask] || ['path_0']; // Default to straight if something goes wrong
     }
 
     private applyCalculatedPath(path: Point[]): void {
@@ -358,8 +365,8 @@ export class TowerDefenseManager {
             for (let x = 0; x < this.map[y].length; x++) {
                 const tile = this.map[y][x];
                 if (tile.name === 'path') {
-                    tile.name = 'landscape';
-                    tile.key = ['landscape_1'];
+                    tile.name = 'grass';
+                    tile.key = ['grass_1'];
                 }
             }
         }
@@ -402,26 +409,26 @@ export class TowerDefenseManager {
             return;
         }
 
-        // const previousTile = {
-        //     key: tile.key,
-        //     name: tile.name
-        // };
+        const previousTile = {
+            key: tile.key,
+            name: tile.name
+        };
 
         if (Math.random() < 0.5) {
-            tile.key = [`tree_${Math.floor(Math.random() * 12)}`] as Tile['key'];
-            tile.name = 'tree';
+            tile.key = [`trees_${Math.floor(Math.random() * 12)}`] as Tile['key'];
+            tile.name = 'trees';
         } else {
-            tile.key = [`rock_${Math.floor(Math.random() * 8)}`] as Tile['key'];
-            tile.name = 'rock';
+            tile.key = [`rocks_${Math.floor(Math.random() * 8)}`] as Tile['key'];
+            tile.name = 'rocks';
         }
         // tile.key = 'tower_00';
         // tile.name = 'tower';
 
-        // if (!this.calculatePath()) {
-        //     tile.key = previousTile.key;
-        //     tile.name = previousTile.name;
-        //     this.calculatePath();
-        // }
+        if (!this.calculatePath()) {
+            tile.key = previousTile.key;
+            tile.name = previousTile.name;
+            this.calculatePath();
+        }
     }
 
     public onMouseLeave(): void {

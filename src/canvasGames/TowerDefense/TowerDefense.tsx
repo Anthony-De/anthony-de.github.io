@@ -11,6 +11,7 @@ export default function TowerDefense() {
             (async () => {
                 await TDManager.loadAssets();
                 console.log('All assets loaded');
+                console.log(TDManager.allSprites);
             })();
         }
     }, []);

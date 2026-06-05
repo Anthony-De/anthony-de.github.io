@@ -1,4 +1,4 @@
-import { Sprite, SpriteKey } from '../canvasGames/TowerDefense/types';
+import { Sprite, type SpriteKey } from '../canvasGames/TowerDefense/types';
 
 export class ResourceManager {
     private static imageCache = new Map<string, Promise<Sprite>>();
@@ -48,13 +48,18 @@ export class ResourceManager {
 
         ctx.drawImage(image, 0, 0);
 
-        const key = path
-            .split('map_tiles')[1]
-            .slice(1)
-            .replace(/\//g, '_')
-            .replace(/\.png$/, '') as SpriteKey;
+        const key = this.getSpriteKeyFromPath(path);
 
         return new Sprite(key, canvas, path);
+    }
+
+    private static getSpriteKeyFromPath(path: string): SpriteKey {
+        const tilePath = path.replace(/\\/g, '/').split('map_tiles/')[1];
+        if (!tilePath) throw new Error(`Failed to parse sprite key from ${path}`);
+        return tilePath
+            .replace(/\.png$/, '')
+            .split('/')
+            .join('_') as SpriteKey;
     }
 
     private static async loadFontFace(path: string, fontUrl: string): Promise<void> {
