@@ -1,11 +1,19 @@
 import { Link } from 'react-router-dom';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import Canvas from '../../components/Canvas';
 import styles from './TowerDefense.module.css';
 import { TowerDefenseManager } from './TowerDefense.ts';
 
 export default function TowerDefense() {
     const TDManager = useRef(new TowerDefenseManager()).current;
+    useEffect(() => {
+        if (!TDManager.assetsLoaded) {
+            (async () => {
+                await TDManager.loadAssets();
+                console.log('All assets loaded');
+            })();
+        }
+    }, []);
 
     return (
         <div className={styles.container}>

@@ -22,7 +22,7 @@ export class TowerDefenseManager {
 
     private static readonly MAP_ROWS = 10;
     private static readonly MAP_COLS = 10;
-    private static allSprites: Sprite[] = [];
+    private allSprites: Sprite[] = [];
     private static readonly mapOffset = {
         x: CANVAS_WIDTH / 2,
         y: CANVAS_HEIGHT / 4
@@ -30,7 +30,14 @@ export class TowerDefenseManager {
     public map: Tile[][] = [];
     public static screen: 'title' | 'game' = 'title';
 
+    public assetsLoaded = false;
+
     constructor() {
+        this.map = TowerDefenseManager.createDefaultMap();
+        // this.calculatePath();
+    }
+
+    public async loadAssets(): Promise<void> {
         // Load All Fonts and Images before starting the game
         const fontUrls = import.meta.glob('./assets/Fonts/**/*.ttf', {
             eager: true,
@@ -42,20 +49,7 @@ export class TowerDefenseManager {
             import: 'default'
         }) as Record<string, string>;
 
-        console.time('Load Fonts');
-        console.time('Load Images');
-        Promise.all([
-            ResourceManager.loadFonts(fontUrls).then(() => {
-                console.timeEnd('Load Fonts');
-            }),
-            ResourceManager.loadImages(imagesUrls).then((sprites) => {
-                TowerDefenseManager.allSprites = sprites;
-                console.timeEnd('Load Images');
-            })
-        ]);
-
-        this.map = TowerDefenseManager.createDefaultMap();
-        // this.calculatePath();
+        Promise.all([ResourceManager.loadFonts(fontUrls), ResourceManager.loadImages(imagesUrls)]);
     }
 
     private static createDefaultMap(): Tile[][] {
@@ -99,9 +93,7 @@ export class TowerDefenseManager {
     }
 
     static async loadFonts(): Promise<void> {
-        console.time('Load Fonts');
         await Promise.all([TowerDefenseManager.loadFont('Magic')]);
-        console.timeEnd('Load Fonts');
     }
 
     public startGame = (): void => {
@@ -112,7 +104,7 @@ export class TowerDefenseManager {
         ctx.fillStyle = '#597f9c';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-        MapDrawer.drawMap(ctx, this.map, TowerDefenseManager.allSprites, {
+        MapDrawer.drawMap(ctx, this.map, this.allSprites, {
             offsetX: TowerDefenseManager.mapOffset.x,
             offsetY: TowerDefenseManager.mapOffset.y
         });
