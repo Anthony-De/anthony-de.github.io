@@ -1,4 +1,4 @@
-import { Sprite, MapDrawConfig, Tile } from './types';
+import { type Sprite, MapDrawConfig, Tile } from './types';
 import { TILE_SIZE } from './constants';
 
 export class MapDrawer {
@@ -21,33 +21,15 @@ export class MapDrawer {
 
         for (let row = 0; row < tiles.length; row++) {
             for (let col = 0; col < tiles[row].length; col++) {
-                const tile = tiles[row][col];
-                const sprite: Sprite | undefined = sprites.find((s) => s.name === tile.key);
+                const tile: Tile = tiles[row][col];
+                const tileSprites: Sprite[] = sprites.filter((s) => tile.key.includes(s.spriteKey));
 
                 const x = (col - row) * (TILE_SIZE / 2) + offsetX;
                 const y = (col + row) * (TILE_SIZE / 4) + offsetY;
 
-                if (sprite) {
-                    const spriteHeight = TILE_SIZE * (sprite.image.height / sprite.image.width);
-                    // const overlayOffset = sprite.type === 'tower' ? TILE_SIZE / 8 : 0;
-
-                    if (sprite.type === 'tower') {
-                        this.drawFullTower(
-                            ctx,
-                            sprites.filter((s) => s.name.startsWith(tile.key as string)),
-                            x,
-                            y
-                        );
-                    } else {
-                        ctx.drawImage(
-                            sprite.image,
-                            x - TILE_SIZE / 2,
-                            y - spriteHeight + TILE_SIZE * 0.75,
-                            TILE_SIZE,
-                            spriteHeight
-                        );
-                    }
-                    if (this.isOverlayNeeded(tile)) this.drawPlaceholderTile(ctx, tile, x, y); //- overlayOffset);
+                if (tileSprites.length > 0) {
+                    this.drawTile(ctx, tileSprites, x, y);
+                    if (this.isOverlayNeeded(tile)) this.drawPlaceholderTile(ctx, tile, x, y);
                 }
                 if (showTileOrigins) {
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -140,19 +122,22 @@ export class MapDrawer {
         ctx.stroke();
     }
 
-    public static drawFullTower(
+    public static drawTile(
         ctx: CanvasRenderingContext2D,
-        towerParts: Sprite[],
+        tileParts: Sprite[],
         x: number,
         y: number
     ): void {
-        const spriteHeight = TILE_SIZE * (towerParts[0].image.height / towerParts[0].image.width);
-        ctx.drawImage(
-            towerParts[0].image,
-            x - TILE_SIZE / 2,
-            y - spriteHeight + TILE_SIZE * 0.75,
-            TILE_SIZE,
-            spriteHeight
-        );
+        for (let i = 0; i < tileParts.length; i++) {
+            const part = tileParts[i];
+            const spriteHeight = TILE_SIZE * (part.image.height / part.image.width);
+            ctx.drawImage(
+                part.image,
+                x - TILE_SIZE / 2,
+                y - spriteHeight + TILE_SIZE * 0.75 - (TILE_SIZE / 4) * i,
+                TILE_SIZE,
+                spriteHeight
+            );
+        }
     }
 }

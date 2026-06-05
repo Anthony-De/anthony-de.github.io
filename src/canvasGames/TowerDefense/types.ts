@@ -8,11 +8,12 @@ export type TreeKey = `tree_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11}`;
 export type RockKey = `rock_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7}`;
 export type CrystalKey = `crystal_${0 | 1 | 2 | 3}`;
 export type DecorationKey = TreeKey | RockKey | CrystalKey;
-export type PlaceholderTileKey = 'spawn' | 'goal';
-export type TowerKey =
-    `tower_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50 | 51 | 52 | 53 | 54}`;
-export type TileKey = GroundTileKey | DecorationKey | PlaceholderTileKey | TowerKey;
-export type SpriteKey = GroundTileKey | DecorationKey | TowerKey;
+// export type TowerBaseKey = `tower_base_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
+// export type TowerMidKey = `tower_mid_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
+// export type TowerTopKey = `tower_top_${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
+// export type TowerPartKey = TowerBaseKey | TowerMidKey | TowerTopKey;
+export type TileKey = GroundTileKey | DecorationKey; // | TowerPartKey;
+export type SpriteKey = GroundTileKey | DecorationKey; // | TowerPartKey;
 
 export type Decoration = {
     sprite: DecorationKey;
@@ -36,13 +37,17 @@ export interface CanvasFrame {
     frame: number;
 }
 
-export type SpriteType = 'rock' | 'tree' | 'crystal' | 'landscape' | 'path' | 'tower';
-
-export type Sprite = {
-    type: SpriteType;
-    name: SpriteKey;
+export class Sprite {
+    path: string;
+    spriteKey: SpriteKey;
     image: HTMLCanvasElement;
-};
+
+    constructor(spriteKey: SpriteKey, image: HTMLCanvasElement, path: string) {
+        this.spriteKey = spriteKey;
+        this.image = image;
+        this.path = path;
+    }
+}
 
 export type MapDrawConfig = {
     offsetX?: number;
@@ -56,18 +61,18 @@ export type MapDrawConfig = {
     showTileKeys?: boolean;
 };
 
-export type Tile = {
+export interface Tile {
     name: string;
-    key: TileKey;
+    key: TileKey[];
     distanceToGoal?: number;
     selectable?: boolean;
     isHovered?: boolean;
     isPressed?: boolean;
-};
+}
 
-export type Neighbors = {
+export interface Neighbors {
     up?: Tile;
     down?: Tile;
     left?: Tile;
     right?: Tile;
-};
+}

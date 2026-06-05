@@ -1,16 +1,8 @@
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../../constants';
 import type { CanvasFrame, Neighbors, Sprite, Tile } from './types';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { ImageProcessing } from '../../utils/image-processing';
+import { ResourceManager } from '../../utils/ResourceManager';
 
-import towersRedSheetImage from './assets/Spritesheet/towers_red_sheet.png';
-import towersRedSheetXml from './assets/Spritesheet/towers_red_sheet.xml?raw';
-import towersBrownSheetImage from './assets/Spritesheet/towers_brown_sheet.png';
-import towersBrownSheetXml from './assets/Spritesheet/towers_brown_sheet.xml?raw';
-import towersGreySheetImage from './assets/Spritesheet/towers_grey_sheet.png';
-import towersGreySheet from './assets/Spritesheet/towers_grey_sheet.xml?raw';
-import landscapeSheetImage from './assets/Spritesheet/landscape_sheet.png';
-import landscapeSheetXml from './assets/Spritesheet/landscape_sheet.xml?raw';
 import { MapDrawer } from './drawMap';
 import { DIRECTIONS, TILE_SIZE } from './constants';
 
@@ -25,42 +17,45 @@ type Point = {
 };
 
 export class TowerDefenseManager {
-    static screen: 'title' | 'game' = 'title';
+    private hoveredTilePosition: TilePosition | null = null;
+    private pressedTilePosition: TilePosition | null = null;
 
     private static readonly MAP_ROWS = 10;
     private static readonly MAP_COLS = 10;
-    public map: Tile[][] = [];
-
+    private static allSprites: Sprite[] = [];
     private static readonly mapOffset = {
         x: CANVAS_WIDTH / 2,
         y: CANVAS_HEIGHT / 4
     };
-
-    private static imagesLoadedPromise: Promise<void> | null = null;
-    private static allSprites: Sprite[] = [];
-
-    private hoveredTilePosition: TilePosition | null = null;
-    private pressedTilePosition: TilePosition | null = null;
-
-    private static readonly assets: {
-        [key: string]: {
-            image: HTMLImageElement;
-            sprites: Sprite[];
-        };
-    } = {
-        towersRed: { image: new Image(), sprites: [] },
-        towersBrown: { image: new Image(), sprites: [] },
-        towersGrey: { image: new Image(), sprites: [] },
-        landscape: { image: new Image(), sprites: [] }
-    };
+    public map: Tile[][] = [];
+    public static screen: 'title' | 'game' = 'title';
 
     constructor() {
-        TowerDefenseManager.loadImages().catch((error) => {
-            console.error('Error loading images:', error);
-        });
+        // Load All Fonts and Images before starting the game
+        const fontUrls = import.meta.glob('./assets/Fonts/**/*.ttf', {
+            eager: true,
+            import: 'default'
+        }) as Record<string, string>;
+
+        const imagesUrls = import.meta.glob('./assets/map_tiles/**/*.png', {
+            eager: true,
+            import: 'default'
+        }) as Record<string, string>;
+
+        console.time('Load Fonts');
+        console.time('Load Images');
+        Promise.all([
+            ResourceManager.loadFonts(fontUrls).then(() => {
+                console.timeEnd('Load Fonts');
+            }),
+            ResourceManager.loadImages(imagesUrls).then((sprites) => {
+                TowerDefenseManager.allSprites = sprites;
+                console.timeEnd('Load Images');
+            })
+        ]);
 
         this.map = TowerDefenseManager.createDefaultMap();
-        this.calculatePath();
+        // this.calculatePath();
     }
 
     private static createDefaultMap(): Tile[][] {
@@ -69,32 +64,33 @@ export class TowerDefenseManager {
                 { length: this.MAP_COLS },
                 () =>
                     ({
-                        key: 'landscape_1',
+                        key: ['landscape_1'],
                         name: 'landscape'
                     }) as Tile
             )
         );
 
-        map[0][0] = { key: 'landscape_0', name: 'spawn' };
-        map[this.MAP_ROWS - 1][this.MAP_COLS - 1] = { key: 'landscape_0', name: 'goal' };
+        // map[0][0] = { key: ['landscape_0'], name: 'spawn' };
+        // map[this.MAP_ROWS - 1][this.MAP_COLS - 1] = { key: ['landscape_0'], name: 'goal' };
+        // map[5][5] = { key: ['tower_base_0', 'tower_mid_0', 'tower_top_0'], name: 'tower' };
 
         return map;
     }
 
-    private static loadImage(key: string, imageSrc: string, xmlData: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            this.assets[key].image.onload = () => {
-                this.assets[key].sprites = ImageProcessing.extractSpritesFromSheet(
-                    this.assets[key].image,
-                    xmlData
-                );
-                resolve();
-            };
-            this.assets[key].image.onerror = () =>
-                reject(new Error(`Failed to load ${key} sprite sheet`));
-            this.assets[key].image.src = imageSrc;
-        });
-    }
+    // private static loadImage(key: string, imageSrc: string, xmlData: string): Promise<void> {
+    //     return new Promise((resolve, reject) => {
+    //         this.assets[key].image.onload = () => {
+    //             this.assets[key].sprites = ImageProcessing.extractSpritesFromSheet(
+    //                 this.assets[key].image,
+    //                 xmlData
+    //             );
+    //             resolve();
+    //         };
+    //         this.assets[key].image.onerror = () =>
+    //             reject(new Error(`Failed to load ${key} sprite sheet`));
+    //         this.assets[key].image.src = imageSrc;
+    //     });
+    // }
 
     private static async loadFont(fontName: string): Promise<void> {
         const font = new FontFace(fontName, `url(./assets/Fonts/${fontName}.ttf)`);
@@ -106,25 +102,6 @@ export class TowerDefenseManager {
         console.time('Load Fonts');
         await Promise.all([TowerDefenseManager.loadFont('Magic')]);
         console.timeEnd('Load Fonts');
-    }
-
-    static async loadImages(): Promise<void> {
-        if (this.imagesLoadedPromise) {
-            return this.imagesLoadedPromise;
-        }
-
-        console.time('Load Sprite Sheets');
-        this.imagesLoadedPromise = Promise.all([
-            this.loadImage('towersRed', towersRedSheetImage, towersRedSheetXml),
-            this.loadImage('towersBrown', towersBrownSheetImage, towersBrownSheetXml),
-            this.loadImage('towersGrey', towersGreySheetImage, towersGreySheet),
-            this.loadImage('landscape', landscapeSheetImage, landscapeSheetXml)
-        ]).then(() => {
-            this.allSprites = Object.values(this.assets).flatMap((asset) => asset.sprites);
-            console.timeEnd('Load Sprite Sheets');
-        });
-
-        return this.imagesLoadedPromise;
     }
 
     public startGame = (): void => {
@@ -313,10 +290,10 @@ export class TowerDefenseManager {
 
     private isWalkableTile(tile: Tile): boolean {
         return (
-            !tile.key.startsWith('tree_') &&
-            !tile.key.startsWith('rock_') &&
-            !tile.key.startsWith('crystal_') &&
-            !tile.key.startsWith('tower_')
+            !tile.key[0].startsWith('tree_') &&
+            !tile.key[0].startsWith('rock_') &&
+            !tile.key[0].startsWith('crystal_') &&
+            !tile.key[0].startsWith('tower_')
         );
     }
 
@@ -342,26 +319,26 @@ export class TowerDefenseManager {
 
         const pathKeys: Partial<Record<number, Tile['key']>> = {
             // Corners
-            [1 | 2]: 'path_11', // up + right
-            [2 | 4]: 'path_12', // right + down
-            [4 | 8]: 'path_13', // down + left
-            [1 | 8]: 'path_14', // up + left
+            [1 | 2]: ['path_11'], // up + right
+            [2 | 4]: ['path_12'], // right + down
+            [4 | 8]: ['path_13'], // down + left
+            [1 | 8]: ['path_14'], // up + left
 
             // Straights
-            [1 | 4]: 'path_15', // up + down
-            [2 | 8]: 'path_16', // right + left
+            [1 | 4]: ['path_15'], // up + down
+            [2 | 8]: ['path_16'], // right + left
 
             // T shapes
-            [1 | 4 | 8]: 'path_7', // up + down + left
-            [1 | 2 | 4]: 'path_5', // up + right + down
-            [1 | 2 | 8]: 'path_4', // up + right + left
-            [2 | 4 | 8]: 'path_6', // right + down + left
+            [1 | 4 | 8]: ['path_7'], // up + down + left
+            [1 | 2 | 4]: ['path_5'], // up + right + down
+            [1 | 2 | 8]: ['path_4'], // up + right + left
+            [2 | 4 | 8]: ['path_6'], // right + down + left
 
             // All way
-            [1 | 2 | 4 | 8]: 'path_10' // up + right + down + left
+            [1 | 2 | 4 | 8]: ['path_10'] // up + right + down + left
         };
 
-        return pathKeys[mask] || 'path_15'; // Default to straight if something goes wrong
+        return pathKeys[mask] || ['path_15']; // Default to straight if something goes wrong
     }
 
     private applyCalculatedPath(path: Point[]): void {
@@ -390,7 +367,7 @@ export class TowerDefenseManager {
                 const tile = this.map[y][x];
                 if (tile.name === 'path') {
                     tile.name = 'landscape';
-                    tile.key = 'landscape_1';
+                    tile.key = ['landscape_1'];
                 }
             }
         }
@@ -433,26 +410,26 @@ export class TowerDefenseManager {
             return;
         }
 
-        const previousTile = {
-            key: tile.key,
-            name: tile.name
-        };
+        // const previousTile = {
+        //     key: tile.key,
+        //     name: tile.name
+        // };
 
         if (Math.random() < 0.5) {
-            tile.key = `tree_${Math.floor(Math.random() * 11)}` as Tile['key'];
+            tile.key = [`tree_${Math.floor(Math.random() * 12)}`] as Tile['key'];
             tile.name = 'tree';
         } else {
-            tile.key = `rock_${Math.floor(Math.random() * 8)}` as Tile['key'];
+            tile.key = [`rock_${Math.floor(Math.random() * 8)}`] as Tile['key'];
             tile.name = 'rock';
         }
         // tile.key = 'tower_00';
         // tile.name = 'tower';
 
-        if (!this.calculatePath()) {
-            tile.key = previousTile.key;
-            tile.name = previousTile.name;
-            this.calculatePath();
-        }
+        // if (!this.calculatePath()) {
+        //     tile.key = previousTile.key;
+        //     tile.name = previousTile.name;
+        //     this.calculatePath();
+        // }
     }
 
     public onMouseLeave(): void {
