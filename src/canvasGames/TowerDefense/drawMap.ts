@@ -1,4 +1,4 @@
-import { type Sprite, MapDrawConfig, Tile } from './types';
+import { type Sprite, MapDrawConfig, Tile, Vec2 } from './types';
 import { TILE_SIZE } from './constants';
 
 export class MapDrawer {
@@ -19,6 +19,9 @@ export class MapDrawer {
             showTileNames = false
         } = config ?? {};
 
+        let overlayTile: Tile | null = null;
+        let overlayCoords: Vec2 | null = null;
+
         for (let row = 0; row < tiles.length; row++) {
             for (let col = 0; col < tiles[row].length; col++) {
                 const tile: Tile = tiles[row][col];
@@ -29,7 +32,10 @@ export class MapDrawer {
 
                 if (tileSprites.length > 0) {
                     this.drawTile(ctx, tileSprites, x, y);
-                    if (this.isOverlayNeeded(tile)) this.drawPlaceholderTile(ctx, tile, x, y);
+                    if (this.isOverlayNeeded(tile)) {
+                        overlayTile = tile;
+                        overlayCoords = new Vec2(x, y);
+                    }
                 }
                 if (showTileOrigins) {
                     ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -39,6 +45,9 @@ export class MapDrawer {
                 }
             }
         }
+
+        if (overlayTile && overlayCoords)
+            this.drawTileOverlay(ctx, overlayTile, overlayCoords.x, overlayCoords.y);
 
         // Draw 2.5D grid for debugging.
         if (showGrid || showTileCoords || showDistanceToGoal || showKeys || showTileNames) {
@@ -102,7 +111,7 @@ export class MapDrawer {
 
     private static isOverlayNeeded = (tile: Tile): boolean => !!tile.isHovered || !!tile.isPressed;
 
-    public static drawPlaceholderTile(
+    public static drawTileOverlay(
         ctx: CanvasRenderingContext2D,
         tile: Tile,
         x: number,
