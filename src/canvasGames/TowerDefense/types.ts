@@ -87,6 +87,7 @@ export class Sprite {
 export type MapDrawConfig = {
     offsetX?: number;
     offsetY?: number;
+    suppressTileOverlay?: boolean;
     padding?: number;
     showTileCoords?: boolean;
     showTileOrigins?: boolean;
@@ -112,9 +113,6 @@ export interface Neighbors {
     right?: Tile;
 }
 
-import type { MouseEvent as ReactMouseEvent } from 'react';
-
-export type CanvasMouseEvent = ReactMouseEvent<HTMLCanvasElement>;
 export class Vec2 {
     x: number;
     y: number;

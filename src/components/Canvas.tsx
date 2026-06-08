@@ -1,31 +1,38 @@
 import React, { useRef, useEffect } from 'react';
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../constants';
 import type { CanvasFrame } from '../canvasGames/TowerDefense/types';
 
 interface CanvasProps {
-    width?: number;
-    height?: number;
+    width?: number | 'auto';
+    height?: number | 'auto';
     className?: string;
-    draw?: (ctx: CanvasRenderingContext2D, frame: CanvasFrame) => void;
-    onClick?: React.MouseEventHandler<HTMLCanvasElement>;
-    onMouseDown?: React.MouseEventHandler<HTMLCanvasElement>;
-    onMouseMove?: React.MouseEventHandler<HTMLCanvasElement>;
-    onMouseUp?: React.MouseEventHandler<HTMLCanvasElement>;
-    onMouseLeave?: React.MouseEventHandler<HTMLCanvasElement>;
+    draw?: (frame: CanvasFrame) => void;
 }
 
-const Canvas: React.FC<CanvasProps> = ({
-    width = CANVAS_WIDTH,
-    height = CANVAS_HEIGHT,
-    className = '',
-    draw = () => {},
-    onClick,
-    onMouseDown,
-    onMouseMove,
-    onMouseUp,
-    onMouseLeave
-}) => {
+const Canvas = React.forwardRef<HTMLCanvasElement, CanvasProps>(function Canvas(
+    { width, height, className = '', draw = () => {} },
+    forwardedRef
+) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        if (!forwardedRef) {
+            return;
+        }
+
+        if (typeof forwardedRef === 'function') {
+            forwardedRef(canvasRef.current);
+
+            return () => {
+                forwardedRef(null);
+            };
+        }
+
+        forwardedRef.current = canvasRef.current;
+
+        return () => {
+            forwardedRef.current = null;
+        };
+    }, [forwardedRef]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -39,6 +46,17 @@ const Canvas: React.FC<CanvasProps> = ({
         if (!ctx) {
             return;
         }
+
+        const resizeCanvas = () => {
+            if (width === 'auto') {
+                canvas.width = window.innerWidth;
+            }
+            if (height === 'auto') {
+                const baseWidth =
+                    width === 'auto' ? canvas.width : Number(width) || window.innerWidth;
+                canvas.height = Math.floor(baseWidth / 2);
+            }
+        };
 
         let animationFrameId = 0;
         let startTime: number | null = null;
@@ -55,32 +73,23 @@ const Canvas: React.FC<CanvasProps> = ({
             frame += 1;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            draw(ctx, { deltaTime, elapsedTime, frame });
+            draw({ deltaTime, elapsedTime, frame });
 
             animationFrameId = window.requestAnimationFrame(render);
         };
 
         animationFrameId = window.requestAnimationFrame(render);
 
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
         return () => {
+            window.removeEventListener('resize', resizeCanvas);
             window.cancelAnimationFrame(animationFrameId);
         };
-    }, [draw]);
+    }, [draw, width, height]);
 
-    return (
-        <canvas
-            id=""
-            ref={canvasRef}
-            width={width}
-            height={height}
-            className={className}
-            onClick={onClick}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUp}
-            onMouseLeave={onMouseLeave}
-        />
-    );
-};
+    return <canvas ref={canvasRef} width={width} height={height} className={className} />;
+});
 
 export default Canvas;

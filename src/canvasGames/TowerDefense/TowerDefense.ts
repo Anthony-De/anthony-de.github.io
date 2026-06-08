@@ -1,5 +1,5 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../../constants';
-import type { CanvasFrame, Neighbors, Sprite, Tile, Vec2, CanvasMouseEvent } from './types';
+import type { CanvasFrame, Neighbors, Sprite, Tile } from './types';
+import { Vec2 } from './types';
 import { ResourceManager } from '../../utils/ResourceManager';
 
 import { MapDrawer } from './drawMap';
@@ -8,23 +8,46 @@ import { DEFAULT_TILE_KEY, DIRECTIONS, TILE_SIZE } from './constants';
 export class TowerDefenseManager {
     private hoveredTilePosition: Vec2 | null = null;
     private pressedTilePosition: Vec2 | null = null;
-
+    private dragStartMouse: Vec2 | null = null;
+    private dragStartOffset: Vec2 | null = null;
+    private lastPointerCanvasPosition: Vec2 | null = null;
+    private isDraggingWorld = false;
+    private isZoomingWorld = false;
+    private zoomEndTimeoutId: number | null = null;
+    private canvas: HTMLCanvasElement;
+    private ctx: CanvasRenderingContext2D;
     private static readonly MAP_ROWS = 10;
     private static readonly MAP_COLS = 10;
+    private static readonly MIN_TILE_SCALE_X = TILE_SIZE / 8;
+    private static readonly MAX_TILE_SCALE_X = TILE_SIZE * 2;
 
-    private static readonly mapOffset = {
-        x: CANVAS_WIDTH / 2,
-        y: CANVAS_HEIGHT / 4
-    };
+    private mapOffset: Vec2;
+    private mapScale: Vec2;
+
     public allSprites: Sprite[] = [];
     public map: Tile[][] = [];
     public static screen: 'title' | 'game' = 'title';
 
     public assetsLoaded = false;
 
-    constructor() {
+    constructor(canvas?: HTMLCanvasElement) {
+        this.canvas = canvas || document.createElement('canvas');
+        this.mapOffset = new Vec2(this.canvas.width / 2, this.canvas.height / 4);
+        this.mapScale = new Vec2(TILE_SIZE / 2, TILE_SIZE / 4);
+        this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
         this.map = TowerDefenseManager.createDefaultMap();
         this.calculatePath();
+
+        this.addEventListeners();
+    }
+
+    public destroy(): void {
+        this.removeEventListeners();
+
+        if (this.zoomEndTimeoutId !== null) {
+            window.clearTimeout(this.zoomEndTimeoutId);
+            this.zoomEndTimeoutId = null;
+        }
     }
 
     public async loadAssets(): Promise<void> {
@@ -84,28 +107,83 @@ export class TowerDefenseManager {
         TowerDefenseManager.screen = 'game';
     };
 
-    public drawTitleScreen = (ctx: CanvasRenderingContext2D): void => {
-        ctx.fillStyle = '#597f9c';
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    public drawTitleScreen = (): void => {
+        this.ctx.fillStyle = '#597f9c';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        MapDrawer.drawMap(ctx, this.map, this.allSprites, {
-            offsetX: TowerDefenseManager.mapOffset.x,
-            offsetY: TowerDefenseManager.mapOffset.y
-        });
+        MapDrawer.drawMap(
+            this.ctx,
+            this.map,
+            this.allSprites,
+            {
+                offsetX: this.mapOffset.x,
+                offsetY: this.mapOffset.y,
+                suppressTileOverlay: this.isDraggingWorld || this.isZoomingWorld
+            },
+            this.mapScale
+        );
     };
 
-    public drawGameScreen = (ctx: CanvasRenderingContext2D, _frame: CanvasFrame): void => {
-        ctx.fillStyle = '#597f9c';
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    public drawGameScreen = (_frame: CanvasFrame): void => {
+        this.ctx.fillStyle = '#597f9c';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     };
 
-    public draw = (ctx: CanvasRenderingContext2D, frame: CanvasFrame): void => {
+    public draw = (frame: CanvasFrame): void => {
         if (TowerDefenseManager.screen === 'title') {
-            this.drawTitleScreen(ctx);
+            this.drawTitleScreen();
         } else {
-            this.drawGameScreen(ctx, frame);
+            this.drawGameScreen(frame);
         }
     };
+
+    private handleResize = (): void => {
+        this.mapOffset = new Vec2(this.canvas.width / 2, this.canvas.height / 4);
+    };
+
+    private handleWheel = (event: WheelEvent): void => {
+        event.preventDefault();
+
+        this.isZoomingWorld = true;
+        if (this.zoomEndTimeoutId !== null) {
+            window.clearTimeout(this.zoomEndTimeoutId);
+        }
+
+        const zoomFactor = Math.exp(event.deltaY * -0.001);
+        const nextScaleX = Math.min(
+            TowerDefenseManager.MAX_TILE_SCALE_X,
+            Math.max(TowerDefenseManager.MIN_TILE_SCALE_X, this.mapScale.x * zoomFactor)
+        );
+
+        this.mapScale = new Vec2(nextScaleX, nextScaleX / 2);
+        const wheelPosition = this.getCanvasMousePosition(event);
+        this.lastPointerCanvasPosition = new Vec2(wheelPosition.x, wheelPosition.y);
+        this.zoomEndTimeoutId = window.setTimeout(() => {
+            this.isZoomingWorld = false;
+            this.zoomEndTimeoutId = null;
+            this.refreshHoveredTileFromPointer();
+        }, 120);
+    };
+
+    private addEventListeners(): void {
+        window.addEventListener('resize', this.handleResize);
+        window.addEventListener('mouseup', this.handleMouseUp);
+
+        this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
+        this.canvas.addEventListener('mousedown', this.handleMouseDown);
+        this.canvas.addEventListener('mousemove', this.handleMouseMove);
+        this.canvas.addEventListener('mouseleave', this.handleMouseLeave);
+    }
+
+    private removeEventListeners(): void {
+        window.removeEventListener('resize', this.handleResize);
+        window.removeEventListener('mouseup', this.handleMouseUp);
+
+        this.canvas.removeEventListener('wheel', this.handleWheel);
+        this.canvas.removeEventListener('mousedown', this.handleMouseDown);
+        this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+        this.canvas.removeEventListener('mouseleave', this.handleMouseLeave);
+    }
 
     private getNeighboringTiles(point: Vec2): Neighbors {
         const neighbors: Neighbors = {};
@@ -343,7 +421,13 @@ export class TowerDefenseManager {
         }
     }
 
-    public onMouseDown(event: CanvasMouseEvent): void {
+    private handleMouseDown = (event: MouseEvent): void => {
+        const { x, y } = this.getCanvasMousePosition(event);
+        this.lastPointerCanvasPosition = new Vec2(x, y);
+        this.dragStartMouse = new Vec2(x, y);
+        this.dragStartOffset = new Vec2(this.mapOffset.x, this.mapOffset.y);
+        this.isDraggingWorld = false;
+
         const hit = this.getTileFromMouseEvent(event);
         this.setPressedTilePosition(hit?.position ?? null);
 
@@ -352,14 +436,47 @@ export class TowerDefenseManager {
                 `Mouse down on tile: ${hit.tile.name} at (${hit.position.x}, ${hit.position.y})`
             );
         }
-    }
+    };
 
-    public onMouseMove(event: CanvasMouseEvent): void {
+    private handleMouseMove = (event: MouseEvent): void => {
+        const pointer = this.getCanvasMousePosition(event);
+        this.lastPointerCanvasPosition = new Vec2(pointer.x, pointer.y);
+
+        if (this.dragStartMouse && this.dragStartOffset && (event.buttons & 1) === 1) {
+            const deltaX = pointer.x - this.dragStartMouse.x;
+            const deltaY = pointer.y - this.dragStartMouse.y;
+
+            if (!this.isDraggingWorld && Math.hypot(deltaX, deltaY) >= 3) {
+                this.isDraggingWorld = true;
+                this.setPressedTilePosition(null);
+            }
+
+            if (this.isDraggingWorld) {
+                this.mapOffset = new Vec2(
+                    this.dragStartOffset.x + deltaX,
+                    this.dragStartOffset.y + deltaY
+                );
+
+                return;
+            }
+        }
+
         const hit = this.getTileFromMouseEvent(event);
         this.setHoveredTilePosition(hit?.position ?? null);
-    }
+    };
 
-    public onMouseUp(event: CanvasMouseEvent): void {
+    private handleMouseUp = (event: MouseEvent): void => {
+        const wasDraggingWorld = this.isDraggingWorld;
+        this.dragStartMouse = null;
+        this.dragStartOffset = null;
+        this.isDraggingWorld = false;
+
+        if (wasDraggingWorld) {
+            this.setPressedTilePosition(null);
+            this.refreshHoveredTileFromPointer();
+            return;
+        }
+
         const hit = this.getTileFromMouseEvent(event);
         const pressedPosition = this.pressedTilePosition;
 
@@ -400,32 +517,50 @@ export class TowerDefenseManager {
             tile.name = previousTile.name;
             this.calculatePath();
         }
-    }
+    };
 
-    public onMouseLeave(): void {
+    private handleMouseLeave = (): void => {
+        this.dragStartMouse = null;
+        this.dragStartOffset = null;
+        this.lastPointerCanvasPosition = null;
+        this.isDraggingWorld = false;
+        this.isZoomingWorld = false;
+
+        if (this.zoomEndTimeoutId !== null) {
+            window.clearTimeout(this.zoomEndTimeoutId);
+            this.zoomEndTimeoutId = null;
+        }
+
         this.setHoveredTilePosition(null);
         this.setPressedTilePosition(null);
-    }
+    };
 
     public screenToWorldCoordinates(
         mouseX: number,
         mouseY: number
     ): { worldX: number; worldY: number } {
         const worldX =
-            ((mouseX - TowerDefenseManager.mapOffset.x) / (TILE_SIZE / 2) +
-                (mouseY - TowerDefenseManager.mapOffset.y) / (TILE_SIZE / 4)) /
+            ((mouseX - this.mapOffset.x) / this.mapScale.x +
+                (mouseY - this.mapOffset.y) / this.mapScale.y) /
             2;
         const worldY =
-            ((mouseY - TowerDefenseManager.mapOffset.y) / (TILE_SIZE / 4) -
-                (mouseX - TowerDefenseManager.mapOffset.x) / (TILE_SIZE / 2)) /
+            ((mouseY - this.mapOffset.y) / this.mapScale.y -
+                (mouseX - this.mapOffset.x) / this.mapScale.x) /
             2;
 
         return { worldX, worldY };
     }
 
-    private getTileFromMouseEvent(event: CanvasMouseEvent): { position: Vec2; tile: Tile } | null {
+    private getTileFromMouseEvent(event: MouseEvent): { position: Vec2; tile: Tile } | null {
         const { x, y } = this.getCanvasMousePosition(event);
-        const { worldX, worldY } = this.screenToWorldCoordinates(x, y);
+        return this.getTileFromCanvasPosition(x, y);
+    }
+
+    private getTileFromCanvasPosition(
+        mouseX: number,
+        mouseY: number
+    ): { position: Vec2; tile: Tile } | null {
+        const { worldX, worldY } = this.screenToWorldCoordinates(mouseX, mouseY);
         const position = {
             x: Math.floor(worldY),
             y: Math.floor(worldX)
@@ -435,14 +570,26 @@ export class TowerDefenseManager {
         return tile ? { position, tile } : null;
     }
 
-    private getCanvasMousePosition(event: CanvasMouseEvent): { x: number; y: number } {
-        const canvas = event.currentTarget;
-        const rect = canvas.getBoundingClientRect();
+    private getCanvasMousePosition(event: MouseEvent): { x: number; y: number } {
+        const rect = this.canvas.getBoundingClientRect();
 
         return {
-            x: ((event.clientX - rect.left) * canvas.width) / rect.width,
-            y: ((event.clientY - rect.top) * canvas.height) / rect.height
+            x: ((event.clientX - rect.left) * this.canvas.width) / rect.width,
+            y: ((event.clientY - rect.top) * this.canvas.height) / rect.height
         };
+    }
+
+    private refreshHoveredTileFromPointer(): void {
+        if (!this.lastPointerCanvasPosition) {
+            this.setHoveredTilePosition(null);
+            return;
+        }
+
+        const hit = this.getTileFromCanvasPosition(
+            this.lastPointerCanvasPosition.x,
+            this.lastPointerCanvasPosition.y
+        );
+        this.setHoveredTilePosition(hit?.position ?? null);
     }
 
     private setHoveredTilePosition(position: Vec2 | null): void {

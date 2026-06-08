@@ -1,36 +1,43 @@
-import { Link } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 import Canvas from '../../components/Canvas';
 import styles from './TowerDefense.module.css';
 import { TowerDefenseManager } from './TowerDefense.ts';
 
 export default function TowerDefense() {
-    const TDManager = useRef(new TowerDefenseManager()).current;
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const TDManager = useRef<TowerDefenseManager | null>(null);
+
     useEffect(() => {
-        if (!TDManager.assetsLoaded) {
-            (async () => {
-                await TDManager.loadAssets();
-                console.log('All assets loaded');
-                console.log(TDManager.allSprites);
+        const canvas = canvasRef.current;
+
+        if (!canvas || TDManager.current) {
+            return;
+        }
+
+        const manager = new TowerDefenseManager(canvas);
+        TDManager.current = manager;
+
+        if (!manager.assetsLoaded) {
+            void (async () => {
+                await manager.loadAssets();
             })();
         }
+
+        return () => {
+            manager.destroy();
+            TDManager.current = null;
+        };
     }, []);
 
     return (
         <div className={styles.container}>
             <Canvas
-                width={800}
-                height={600}
+                ref={canvasRef}
+                width="auto"
+                height="auto"
                 className={styles.canvas}
-                draw={(ctx, frame) => TDManager.draw(ctx, frame)}
-                onMouseDown={(event) => TDManager.onMouseDown(event)}
-                onMouseMove={(event) => TDManager.onMouseMove(event)}
-                onMouseUp={(event) => TDManager.onMouseUp(event)}
-                onMouseLeave={() => TDManager.onMouseLeave()}
+                draw={(frame) => TDManager.current?.draw(frame)}
             />
-            <p>
-                <Link to="/">Back to Projects</Link>
-            </p>
         </div>
     );
 }

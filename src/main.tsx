@@ -4,6 +4,24 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import App from './App.tsx';
 import TowerDefense from './canvasGames/TowerDefense/TowerDefense.tsx';
 
+const blockedZoomKeys = new Set(['+', '-', '=', '_', '0']);
+
+window.addEventListener(
+    'wheel',
+    (event) => {
+        if (event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+        }
+    },
+    { passive: false }
+);
+
+window.addEventListener('keydown', (event) => {
+    if ((event.ctrlKey || event.metaKey) && blockedZoomKeys.has(event.key)) {
+        event.preventDefault();
+    }
+});
+
 const rootElement = document.querySelector<HTMLElement>('#root');
 
 if (!rootElement) {
