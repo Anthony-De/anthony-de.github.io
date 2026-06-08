@@ -48,10 +48,12 @@ function App() {
         <main className={styles.container}>
             <header className={styles.header}>
                 <div>
-                    <p className={styles.kicker}>Game Projects</p>
                     <h1>Projects</h1>
                 </div>
-                <p className={styles.summary}>1 playable, 6 planned</p>
+                <p className={styles.summary}>
+                    {projects.filter((p) => !p.inProgress).length} playable,{' '}
+                    {projects.filter((p) => p.inProgress).length} in progress
+                </p>
             </header>
 
             <section className={styles.projectGrid} aria-label="Project list">
