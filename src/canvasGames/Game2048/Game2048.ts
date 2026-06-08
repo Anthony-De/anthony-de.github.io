@@ -20,8 +20,18 @@ type LineResult = {
 
 export class Game2048Manager {
     private static readonly gridSize = 4;
+    private static readonly boardTheme = {
+        pageGradientStart: '#f8f5ee',
+        pageGradientMid: '#edf4ef',
+        pageGradientEnd: '#f1ece4',
+        boardOuter: '#c9bba8',
+        boardInner: '#b9aa95',
+        boardStroke: '#8a4b2e',
+        emptyCell: 'rgba(255, 253, 248, 0.2)',
+        emptyCellStroke: 'rgba(255, 247, 237, 0.4)'
+    };
     private static readonly defaultTileStyle: TileStyle = {
-        background: '#3c3a32',
+        background: '#8a4b2e',
         text: '#f9f6f2'
     };
     private static readonly tileStyles: { readonly [value: number]: TileStyle } = {
@@ -127,27 +137,81 @@ export class Game2048Manager {
         }
 
         // Background
-        this.ctx.fillStyle = '#afa299';
+        const pageGradient = this.ctx.createLinearGradient(
+            0,
+            0,
+            this.canvas.width,
+            this.canvas.height
+        );
+        pageGradient.addColorStop(0, Game2048Manager.boardTheme.pageGradientStart);
+        pageGradient.addColorStop(0.48, Game2048Manager.boardTheme.pageGradientMid);
+        pageGradient.addColorStop(1, Game2048Manager.boardTheme.pageGradientEnd);
+        this.ctx.fillStyle = pageGradient;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
+        this.ctx.fillStyle = 'rgba(46, 125, 91, 0.14)';
+        this.ctx.beginPath();
+        this.ctx.arc(
+            this.canvas.width * 0.08,
+            this.canvas.height * 0.06,
+            this.canvas.width * 0.18,
+            0,
+            Math.PI * 2
+        );
+        this.ctx.fill();
+
+        this.ctx.fillStyle = 'rgba(197, 118, 58, 0.14)';
+        this.ctx.beginPath();
+        this.ctx.arc(
+            this.canvas.width * 0.9,
+            this.canvas.height * 0.12,
+            this.canvas.width * 0.17,
+            0,
+            Math.PI * 2
+        );
+        this.ctx.fill();
+
         // Border for game area
-        this.ctx.strokeStyle = '#776e65';
-        const borderSize = 10;
+        this.ctx.strokeStyle = Game2048Manager.boardTheme.boardStroke;
+        const borderSize = 8;
         this.ctx.lineWidth = borderSize;
 
-        const tileSize = this.canvas.width / (Game2048Manager.gridSize * 2);
-
-        const gameAreaSize = tileSize * Game2048Manager.gridSize;
-        const offset = { x: this.canvas.width / 2, y: this.canvas.height / 2 };
-
-        this.ctx.strokeRect(
-            offset.x - gameAreaSize / 2 - borderSize / 2,
-            offset.y - gameAreaSize / 2 - borderSize / 2,
-            gameAreaSize + borderSize,
-            gameAreaSize + borderSize
+        const available = Math.min(this.canvas.width, this.canvas.height);
+        const tileGap = Math.max(6, Math.floor(available * 0.012));
+        const tileSize = Math.floor(
+            (available * 0.65 - tileGap * (Game2048Manager.gridSize + 1)) / Game2048Manager.gridSize
         );
 
-        this.ctx.font = `${tileSize / 3}px Arial`;
+        const gameAreaSize =
+            tileSize * Game2048Manager.gridSize + tileGap * (Game2048Manager.gridSize + 1);
+        const offset = { x: this.canvas.width / 2, y: this.canvas.height / 2 };
+        const boardX = offset.x - gameAreaSize / 2;
+        const boardY = offset.y - gameAreaSize / 2;
+
+        this.ctx.fillStyle = Game2048Manager.boardTheme.boardOuter;
+        this.drawRoundedRect(
+            boardX - borderSize,
+            boardY - borderSize,
+            gameAreaSize + borderSize * 2,
+            gameAreaSize + borderSize * 2,
+            16
+        );
+        this.ctx.fill();
+
+        this.ctx.fillStyle = Game2048Manager.boardTheme.boardInner;
+        this.drawRoundedRect(boardX, boardY, gameAreaSize, gameAreaSize, 12);
+        this.ctx.fill();
+
+        this.drawRoundedRect(
+            boardX - borderSize / 2,
+            boardY - borderSize / 2,
+            gameAreaSize + borderSize,
+            gameAreaSize + borderSize,
+            14
+        );
+        this.ctx.stroke();
+
+        this.ctx.font = `700 ${tileSize / 3.2}px 'Segoe UI', Arial, sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
 
@@ -163,11 +227,25 @@ export class Game2048Manager {
                 }
 
                 const value = this.grid[row][col];
+                const pos = {
+                    x: boardX + tileGap + col * (tileSize + tileGap),
+                    y: boardY + tileGap + row * (tileSize + tileGap)
+                };
+
+                this.ctx.fillStyle = Game2048Manager.boardTheme.emptyCell;
+                this.drawRoundedRect(
+                    pos.x,
+                    pos.y,
+                    tileSize,
+                    tileSize,
+                    Math.max(8, tileSize * 0.08)
+                );
+                this.ctx.fill();
+                this.ctx.strokeStyle = Game2048Manager.boardTheme.emptyCellStroke;
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
+
                 if (value !== 0) {
-                    const pos = {
-                        x: col * tileSize + offset.x - (Game2048Manager.gridSize * tileSize) / 2,
-                        y: row * tileSize + offset.y - (Game2048Manager.gridSize * tileSize) / 2
-                    };
                     this.drawTile(value, pos.x, pos.y, tileSize);
                 }
             }
@@ -182,24 +260,12 @@ export class Game2048Manager {
 
             for (const animation of this.activeMoveAnimations) {
                 const startPos = {
-                    x:
-                        animation.startCol * tileSize +
-                        offset.x -
-                        (Game2048Manager.gridSize * tileSize) / 2,
-                    y:
-                        animation.startRow * tileSize +
-                        offset.y -
-                        (Game2048Manager.gridSize * tileSize) / 2
+                    x: boardX + tileGap + animation.startCol * (tileSize + tileGap),
+                    y: boardY + tileGap + animation.startRow * (tileSize + tileGap)
                 };
                 const endPos = {
-                    x:
-                        animation.endCol * tileSize +
-                        offset.x -
-                        (Game2048Manager.gridSize * tileSize) / 2,
-                    y:
-                        animation.endRow * tileSize +
-                        offset.y -
-                        (Game2048Manager.gridSize * tileSize) / 2
+                    x: boardX + tileGap + animation.endCol * (tileSize + tileGap),
+                    y: boardY + tileGap + animation.endRow * (tileSize + tileGap)
                 };
 
                 const x = startPos.x + (endPos.x - startPos.x) * easedProgress;
@@ -211,10 +277,34 @@ export class Game2048Manager {
 
     private drawTile(value: number, x: number, y: number, tileSize: number): void {
         const tileStyle = Game2048Manager.getTileStyle(value);
+        this.ctx.shadowColor = 'rgba(31, 41, 51, 0.12)';
+        this.ctx.shadowBlur = Math.max(4, tileSize * 0.06);
+        this.ctx.shadowOffsetY = Math.max(1, tileSize * 0.03);
         this.ctx.fillStyle = tileStyle.background;
-        this.ctx.fillRect(x, y, tileSize, tileSize);
+        this.drawRoundedRect(x, y, tileSize, tileSize, Math.max(8, tileSize * 0.08));
+        this.ctx.fill();
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowOffsetY = 0;
         this.ctx.fillStyle = tileStyle.text;
         this.ctx.fillText(value.toString(), x + tileSize / 2, y + tileSize / 2);
+    }
+
+    private drawRoundedRect(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        radius: number
+    ): void {
+        const r = Math.max(0, Math.min(radius, width / 2, height / 2));
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + r, y);
+        this.ctx.arcTo(x + width, y, x + width, y + height, r);
+        this.ctx.arcTo(x + width, y + height, x, y + height, r);
+        this.ctx.arcTo(x, y + height, x, y, r);
+        this.ctx.arcTo(x, y, x + width, y, r);
+        this.ctx.closePath();
     }
 
     private getOrientedPosition(
