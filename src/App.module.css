@@ -1,56 +1,99 @@
 :root {
-    font-family: Georgia, 'Times New Roman', Times, serif;
-    color: #1f2937;
-    background: linear-gradient(180deg, #f4f8fb 0%, #e6eef4 100%);
+    font-family:
+        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+        sans-serif;
+    color: #172033;
+    background: #f4f1ea;
 }
 
 * {
     box-sizing: border-box;
 }
 
+html {
+    min-width: 320px;
+    min-height: 100%;
+    background: #f4f1ea;
+}
+
 body {
     margin: 0;
     min-height: 100vh;
-    display: grid;
-    place-items: center;
-    background-color: #000000;
+    background:
+        radial-gradient(circle at 8% 0%, rgba(46, 125, 91, 0.16), transparent 28rem),
+        radial-gradient(circle at 92% 12%, rgba(197, 118, 58, 0.15), transparent 26rem),
+        linear-gradient(135deg, #f8f5ee 0%, #edf4ef 48%, #f1ece4 100%);
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 3.5rem;
+    line-height: 1;
+    color: #172033;
+}
+
+a {
+    color: inherit;
+}
+
+:global(#root) {
+    min-height: 100vh;
 }
 
 .container {
-    width: min(90vw, 32rem);
-    background: #ffffffd9;
-    border: 1px solid #cbd5e1;
-    border-radius: 1rem;
-    padding: 2rem;
-    text-align: center;
+    width: min(1180px, 100%);
+    margin: 0 auto;
+    padding: 3.5rem 1.5rem 4rem;
 }
 
-.projects-grid {
+.header {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(85, 96, 106, 0.2);
+}
+
+.kicker {
+    margin: 0 0 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #8a4b2e;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.summary {
+    margin: 0 0 0.25rem;
+    font-weight: 700;
+    color: #56616d;
+}
+
+.projectGrid {
     display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
     gap: 1rem;
+    align-items: stretch;
 }
 
-.project-card {
-    border: 1px solid #cbd5e1;
-    border-radius: 0.75rem;
-    padding: 1rem;
-    text-align: left;
-}
+@media (max-width: 700px) {
+    .header h1 {
+        font-size: 2.5rem;
+    }
 
-h1 {
-    margin-top: 0;
-}
+    .container {
+        padding: 2rem 1rem 2.5rem;
+    }
 
-button {
-    padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
-    border: 1px solid #2563eb;
-    background: #2563eb;
-    color: #ffffff;
-    font-size: 1rem;
-    cursor: pointer;
-}
+    .header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
 
-button:hover {
-    background: #1d4ed8;
+    .summary {
+        margin: 0;
+    }
 }

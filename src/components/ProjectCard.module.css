@@ -1,0 +1,340 @@
+.projectCard {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 9rem) minmax(0, 1fr);
+    gap: 1rem;
+    min-height: 12rem;
+    overflow: hidden;
+    padding: 0.875rem;
+    color: #1f2933;
+    text-decoration: none;
+    background: rgba(255, 253, 248, 0.94);
+    border: 1px solid rgba(121, 129, 118, 0.22);
+    border-radius: 8px;
+    box-shadow: 0 1rem 2rem rgba(49, 54, 63, 0.08);
+    transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        transform 160ms ease;
+}
+
+.projectCard::before {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 0.25rem;
+    content: '';
+    background: #c9a94c;
+    opacity: 0.35;
+}
+
+.playable {
+    grid-column: span 2;
+    border-color: rgba(46, 125, 91, 0.36);
+}
+
+.playable::before {
+    background: linear-gradient(90deg, #2e7d5b, #c5763a);
+    opacity: 1;
+}
+
+.playable:hover {
+    border-color: rgba(46, 125, 91, 0.62);
+    box-shadow: 0 1.25rem 2.5rem rgba(49, 54, 63, 0.14);
+    transform: translateY(-2px);
+}
+
+.playable:focus-visible {
+    outline: 3px solid rgba(46, 125, 91, 0.55);
+    outline-offset: 4px;
+}
+
+.planned {
+    background: rgba(255, 255, 255, 0.74);
+}
+
+.planned .visual {
+    filter: saturate(0.82);
+}
+
+.visual {
+    position: relative;
+    min-height: 10rem;
+    overflow: hidden;
+    background: #edf1e9;
+    border: 1px solid rgba(31, 41, 51, 0.1);
+    border-radius: 6px;
+}
+
+.visual::before,
+.visual::after,
+.visual span {
+    position: absolute;
+    content: '';
+}
+
+.visual span {
+    display: none;
+}
+
+.visual[data-variant='tower-defense'] {
+    background-color: #83b86d;
+    background-image:
+        linear-gradient(135deg, rgba(215, 184, 121, 0.82) 0 27%, transparent 27%),
+        linear-gradient(45deg, rgba(255, 255, 255, 0.08) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(0, 0, 0, 0.07) 25%, transparent 25%);
+    background-position:
+        center,
+        0 0,
+        0 0;
+    background-size:
+        auto,
+        2.25rem 2.25rem,
+        2.25rem 2.25rem;
+}
+
+.visual[data-variant='tower-defense']::before {
+    top: -1.25rem;
+    left: 2.75rem;
+    width: 2.75rem;
+    height: 13rem;
+    background: #d2b071;
+    box-shadow: 0 0 0 0.375rem rgba(93, 64, 43, 0.16);
+    transform: rotate(28deg);
+}
+
+.visual[data-variant='tower-defense']::after {
+    right: 1.25rem;
+    bottom: 1.25rem;
+    width: 2.875rem;
+    height: 2.875rem;
+    background: #7d5360;
+    border: 0.45rem solid #c9614f;
+    border-radius: 6px;
+    box-shadow: 0 0 0 0.55rem rgba(47, 68, 50, 0.18);
+}
+
+.visual[data-variant='chess'] {
+    background-color: #ead7bd;
+    background-image: conic-gradient(
+        #2f3437 25%,
+        #ead7bd 0 50%,
+        #2f3437 0 75%,
+        #ead7bd 0
+    );
+    background-size: 2.4rem 2.4rem;
+}
+
+.visual[data-variant='chess']::after {
+    right: 1rem;
+    bottom: 1rem;
+    width: 2.25rem;
+    height: 4rem;
+    background: linear-gradient(#f8f1e5 0 28%, #d7c3a8 28% 100%);
+    border-radius: 1rem 1rem 0.35rem 0.35rem;
+    box-shadow: 0 0.45rem 0 rgba(31, 41, 51, 0.2);
+}
+
+.visual[data-variant='tic-tac-toe'] {
+    background:
+        linear-gradient(
+            90deg,
+            transparent 31%,
+            #334155 31% 34%,
+            transparent 34% 65%,
+            #334155 65% 68%,
+            transparent 68%
+        ),
+        linear-gradient(
+            0deg,
+            transparent 31%,
+            #334155 31% 34%,
+            transparent 34% 65%,
+            #334155 65% 68%,
+            transparent 68%
+        ),
+        #f9fafb;
+}
+
+.visual[data-variant='tic-tac-toe'] span {
+    display: block;
+    width: 1.9rem;
+    height: 1.9rem;
+}
+
+.visual[data-variant='tic-tac-toe'] span:nth-child(1) {
+    top: 1rem;
+    left: 1rem;
+    background:
+        linear-gradient(45deg, transparent 43%, #c5763a 43% 57%, transparent 57%),
+        linear-gradient(-45deg, transparent 43%, #c5763a 43% 57%, transparent 57%);
+}
+
+.visual[data-variant='tic-tac-toe'] span:nth-child(2) {
+    right: 1.1rem;
+    bottom: 1.1rem;
+    border: 0.3rem solid #2e7d5b;
+    border-radius: 50%;
+}
+
+.visual[data-variant='snake'] {
+    background:
+        linear-gradient(rgba(31, 41, 51, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31, 41, 51, 0.08) 1px, transparent 1px),
+        #dfead9;
+    background-size: 1.35rem 1.35rem;
+}
+
+.visual[data-variant='snake'] span:nth-child(1) {
+    top: 4.25rem;
+    left: 1.3rem;
+    display: block;
+    width: 1.25rem;
+    height: 1.25rem;
+    background: #2e7d5b;
+    border-radius: 5px;
+    box-shadow:
+        1.45rem 0 #3f946c,
+        2.9rem 0 #4ea97b,
+        4.35rem 0 #5bb985,
+        4.35rem -1.45rem #6dc693,
+        5.8rem -1.45rem #7bd19e;
+}
+
+.visual[data-variant='2048'] {
+    background: #c9bba8;
+}
+
+.visual[data-variant='2048']::before {
+    inset: 1rem;
+    background:
+        linear-gradient(90deg, #eee4da 0 45%, transparent 45% 55%, #ede0c8 55% 100%),
+        linear-gradient(#f2b179 0 45%, transparent 45% 55%, #f59563 55% 100%);
+    background-position:
+        0 0,
+        0 100%;
+    background-repeat: no-repeat;
+    background-size:
+        100% 48%,
+        100% 48%;
+    border-radius: 6px;
+}
+
+.visual[data-variant='2048']::after {
+    right: 1.45rem;
+    bottom: 1.35rem;
+    font-size: 1rem;
+    font-weight: 900;
+    color: #fff7ed;
+    content: '2048';
+}
+
+.visual[data-variant='minesweeper'] {
+    background:
+        radial-gradient(circle at 28% 28%, #334155 0 0.35rem, transparent 0.38rem),
+        radial-gradient(circle at 72% 60%, #c5763a 0 0.35rem, transparent 0.38rem),
+        linear-gradient(rgba(31, 41, 51, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31, 41, 51, 0.12) 1px, transparent 1px),
+        #e7ecef;
+    background-size:
+        100% 100%,
+        100% 100%,
+        2rem 2rem,
+        2rem 2rem;
+}
+
+.visual[data-variant='sudoku'] {
+    background:
+        linear-gradient(#1f2933 2px, transparent 2px),
+        linear-gradient(90deg, #1f2933 2px, transparent 2px),
+        linear-gradient(rgba(31, 41, 51, 0.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31, 41, 51, 0.18) 1px, transparent 1px),
+        #fbfaf7;
+    background-size:
+        100% 33.333%,
+        33.333% 100%,
+        100% 11.111%,
+        11.111% 100%;
+}
+
+.content {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    padding: 0.25rem 0;
+}
+
+.cardHeader {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.cardHeader h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    line-height: 1.15;
+    color: #172033;
+}
+
+.status {
+    flex: 0 0 auto;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #315f48;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: #e5efe6;
+    border-radius: 6px;
+}
+
+.planned .status {
+    color: #756b56;
+    background: #eee8dc;
+}
+
+.content p {
+    margin: 0.8rem 0 0;
+    font-size: 0.98rem;
+    line-height: 1.55;
+    color: #57616f;
+}
+
+.action {
+    margin-top: auto;
+    padding-top: 1.5rem;
+    font-weight: 800;
+    color: #2e7d5b;
+}
+
+.planned .action {
+    color: #7b8491;
+}
+
+@media (max-width: 900px) {
+    .playable {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 700px) {
+    .projectCard {
+        grid-template-columns: 1fr;
+    }
+
+    .visual {
+        min-height: 8.5rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .projectCard {
+        transition: none;
+    }
+
+    .playable:hover {
+        transform: none;
+    }
+}
