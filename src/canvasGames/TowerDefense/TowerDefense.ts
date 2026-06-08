@@ -118,7 +118,7 @@ export class TowerDefenseManager {
             {
                 offsetX: this.mapOffset.x,
                 offsetY: this.mapOffset.y,
-                suppressTileOverlay: this.isDraggingWorld || this.isZoomingWorld
+                suppressTileOverlay: this.isZoomingWorld
             },
             this.mapScale
         );
