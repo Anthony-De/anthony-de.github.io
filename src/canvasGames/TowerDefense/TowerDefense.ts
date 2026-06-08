@@ -13,15 +13,18 @@ export class TowerDefenseManager {
     private pinchStartDistance: number | null = null;
     private pinchStartScaleX: number | null = null;
     private lastPointerCanvasPosition: Vec2 | null = null;
+    private ignoreMouseEventsUntil = 0;
     private isDraggingWorld = false;
     private isZoomingWorld = false;
     private zoomEndTimeoutId: number | null = null;
+    private readonly isMobileDevice: boolean;
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private static readonly MAP_ROWS = 10;
     private static readonly MAP_COLS = 10;
     private static readonly MIN_TILE_SCALE_X = TILE_SIZE / 8;
     private static readonly MAX_TILE_SCALE_X = TILE_SIZE * 2;
+    private static readonly TOUCH_MOUSE_SUPPRESSION_MS = 700;
 
     private mapOffset: Vec2;
     private mapScale: Vec2;
@@ -34,6 +37,7 @@ export class TowerDefenseManager {
 
     constructor(canvas?: HTMLCanvasElement) {
         this.canvas = canvas || document.createElement('canvas');
+        this.isMobileDevice = TowerDefenseManager.detectMobileDevice();
         this.mapOffset = new Vec2(this.canvas.width / 2, this.canvas.height / 4);
         this.mapScale = new Vec2(TILE_SIZE / 2, TILE_SIZE / 4);
         this.ctx = this.canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -120,7 +124,8 @@ export class TowerDefenseManager {
             {
                 offsetX: this.mapOffset.x,
                 offsetY: this.mapOffset.y,
-                suppressTileOverlay: this.isZoomingWorld || this.isDraggingWorld
+                suppressTileOverlay:
+                    this.isMobileDevice || this.isZoomingWorld || this.isDraggingWorld
             },
             this.mapScale
         );
@@ -145,6 +150,10 @@ export class TowerDefenseManager {
         );
     };
 
+    private static detectMobileDevice(): boolean {
+        return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+    }
+
     private handleWheel = (event: WheelEvent): void => {
         event.preventDefault();
         const zoomFactor = Math.exp(event.deltaY * -0.001);
@@ -156,6 +165,8 @@ export class TowerDefenseManager {
     };
 
     private handleContextMenu = (event: MouseEvent): void => {
+        if (this.shouldIgnoreMouseEvent(event)) return;
+
         event.preventDefault();
 
         const { x, y } = this.getCanvasMousePosition(event);
@@ -171,7 +182,11 @@ export class TowerDefenseManager {
     };
 
     private handleTouchStart = (event: TouchEvent): void => {
+        this.suppressMouseEventsFromTouch();
+
         if (event.touches.length === 1) {
+            event.preventDefault();
+
             const touchPosition = this.getCanvasTouchPosition(event.touches[0]);
 
             this.lastPointerCanvasPosition = touchPosition;
@@ -202,6 +217,8 @@ export class TowerDefenseManager {
     };
 
     private handleTouchMove = (event: TouchEvent): void => {
+        this.suppressMouseEventsFromTouch();
+
         if (event.touches.length === 1) {
             const touchPosition = this.getCanvasTouchPosition(event.touches[0]);
             this.lastPointerCanvasPosition = touchPosition;
@@ -253,6 +270,9 @@ export class TowerDefenseManager {
     };
 
     private handleTouchEnd = (event: TouchEvent): void => {
+        this.suppressMouseEventsFromTouch();
+        event.preventDefault();
+
         if (event.touches.length === 0 && this.dragStartMouse) {
             const changedTouch = event.changedTouches[0];
 
@@ -294,6 +314,18 @@ export class TowerDefenseManager {
         this.finishZoomInteractionSoon();
     };
 
+    private handleTouchCancel = (event: TouchEvent): void => {
+        this.suppressMouseEventsFromTouch();
+        event.preventDefault();
+        this.dragStartMouse = null;
+        this.dragStartOffset = null;
+        this.pinchStartDistance = null;
+        this.pinchStartScaleX = null;
+        this.isDraggingWorld = false;
+        this.setPressedTilePosition(null);
+        this.refreshHoveredTileFromPointer();
+    };
+
     private addEventListeners(): void {
         window.addEventListener('resize', this.handleResize);
         window.addEventListener('mouseup', this.handleMouseUp);
@@ -302,8 +334,8 @@ export class TowerDefenseManager {
         this.canvas.addEventListener('wheel', this.handleWheel, { passive: false });
         this.canvas.addEventListener('touchstart', this.handleTouchStart, { passive: false });
         this.canvas.addEventListener('touchmove', this.handleTouchMove, { passive: false });
-        this.canvas.addEventListener('touchend', this.handleTouchEnd);
-        this.canvas.addEventListener('touchcancel', this.handleTouchEnd);
+        this.canvas.addEventListener('touchend', this.handleTouchEnd, { passive: false });
+        this.canvas.addEventListener('touchcancel', this.handleTouchCancel, { passive: false });
         this.canvas.addEventListener('mousedown', this.handleMouseDown);
         this.canvas.addEventListener('mousemove', this.handleMouseMove);
         this.canvas.addEventListener('mouseleave', this.handleMouseLeave);
@@ -318,7 +350,7 @@ export class TowerDefenseManager {
         this.canvas.removeEventListener('touchstart', this.handleTouchStart);
         this.canvas.removeEventListener('touchmove', this.handleTouchMove);
         this.canvas.removeEventListener('touchend', this.handleTouchEnd);
-        this.canvas.removeEventListener('touchcancel', this.handleTouchEnd);
+        this.canvas.removeEventListener('touchcancel', this.handleTouchCancel);
         this.canvas.removeEventListener('mousedown', this.handleMouseDown);
         this.canvas.removeEventListener('mousemove', this.handleMouseMove);
         this.canvas.removeEventListener('mouseleave', this.handleMouseLeave);
@@ -561,6 +593,10 @@ export class TowerDefenseManager {
     }
 
     private handleMouseDown = (event: MouseEvent): void => {
+        if (this.shouldIgnoreMouseEvent(event)) {
+            return;
+        }
+
         if (event.button !== 0) {
             return;
         }
@@ -582,6 +618,8 @@ export class TowerDefenseManager {
     };
 
     private handleMouseMove = (event: MouseEvent): void => {
+        if (this.shouldIgnoreMouseEvent(event)) return;
+
         const pointer = this.getCanvasMousePosition(event);
         this.lastPointerCanvasPosition = new Vec2(pointer.x, pointer.y);
 
@@ -608,6 +646,8 @@ export class TowerDefenseManager {
     };
 
     private handleMouseUp = (event: MouseEvent): void => {
+        if (this.shouldIgnoreMouseEvent(event)) return;
+
         if (event.button !== 0) {
             return;
         }
@@ -718,6 +758,18 @@ export class TowerDefenseManager {
 
     private getDistanceBetweenPoints(firstPoint: Vec2, secondPoint: Vec2): number {
         return Math.hypot(secondPoint.x - firstPoint.x, secondPoint.y - firstPoint.y);
+    }
+
+    private suppressMouseEventsFromTouch(): void {
+        this.ignoreMouseEventsUntil =
+            window.performance.now() + TowerDefenseManager.TOUCH_MOUSE_SUPPRESSION_MS;
+    }
+
+    private shouldIgnoreMouseEvent(event: MouseEvent): boolean {
+        if (window.performance.now() >= this.ignoreMouseEventsUntil) return false;
+
+        event.preventDefault();
+        return true;
     }
 
     private setZoomScale(nextScaleX: number): void {
