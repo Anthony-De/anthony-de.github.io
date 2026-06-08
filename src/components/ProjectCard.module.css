@@ -115,23 +115,8 @@
 
 .visual[data-variant='chess'] {
     background-color: #ead7bd;
-    background-image: conic-gradient(
-        #2f3437 25%,
-        #ead7bd 0 50%,
-        #2f3437 0 75%,
-        #ead7bd 0
-    );
+    background-image: conic-gradient(#2f3437 25%, #ead7bd 0 50%, #2f3437 0 75%, #ead7bd 0);
     background-size: 2.4rem 2.4rem;
-}
-
-.visual[data-variant='chess']::after {
-    right: 1rem;
-    bottom: 1rem;
-    width: 2.25rem;
-    height: 4rem;
-    background: linear-gradient(#f8f1e5 0 28%, #d7c3a8 28% 100%);
-    border-radius: 1rem 1rem 0.35rem 0.35rem;
-    box-shadow: 0 0.45rem 0 rgba(31, 41, 51, 0.2);
 }
 
 .visual[data-variant='tic-tac-toe'] {
@@ -179,8 +164,7 @@
 .visual[data-variant='snake'] {
     background:
         linear-gradient(rgba(31, 41, 51, 0.08) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(31, 41, 51, 0.08) 1px, transparent 1px),
-        #dfead9;
+        linear-gradient(90deg, rgba(31, 41, 51, 0.08) 1px, transparent 1px), #dfead9;
     background-size: 1.35rem 1.35rem;
 }
 
@@ -233,8 +217,7 @@
         radial-gradient(circle at 28% 28%, #334155 0 0.35rem, transparent 0.38rem),
         radial-gradient(circle at 72% 60%, #c5763a 0 0.35rem, transparent 0.38rem),
         linear-gradient(rgba(31, 41, 51, 0.12) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(31, 41, 51, 0.12) 1px, transparent 1px),
-        #e7ecef;
+        linear-gradient(90deg, rgba(31, 41, 51, 0.12) 1px, transparent 1px), #e7ecef;
     background-size:
         100% 100%,
         100% 100%,
@@ -247,8 +230,7 @@
         linear-gradient(#1f2933 2px, transparent 2px),
         linear-gradient(90deg, #1f2933 2px, transparent 2px),
         linear-gradient(rgba(31, 41, 51, 0.18) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(31, 41, 51, 0.18) 1px, transparent 1px),
-        #fbfaf7;
+        linear-gradient(90deg, rgba(31, 41, 51, 0.18) 1px, transparent 1px), #fbfaf7;
     background-size:
         100% 33.333%,
         33.333% 100%,

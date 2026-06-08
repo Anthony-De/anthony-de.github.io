@@ -25,29 +25,11 @@ const projects: Project[] = [
         variant: 'chess'
     },
     {
-        title: 'Tic Tac Toe',
-        description: 'Single player tic tac toe game',
-        link: '/Tic-Tac-Toe',
-        variant: 'tic-tac-toe'
-    },
-    {
-        title: 'Snake',
-        description: 'Single player snake game',
-        link: '/Snake-Game',
-        variant: 'snake'
-    },
-    {
         title: '2048',
         description: 'Single player 2048 game',
         link: '/2048',
         variant: '2048',
         inProgress: true
-    },
-    {
-        title: 'Minesweeper',
-        description: 'Single player minesweeper game',
-        link: '/Minesweeper-Game',
-        variant: 'minesweeper'
     },
     {
         title: 'Sudoku',
