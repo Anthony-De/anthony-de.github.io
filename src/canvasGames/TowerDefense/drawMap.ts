@@ -151,14 +151,13 @@ export class MapDrawer {
         for (let i = 0; i < tileParts.length; i++) {
             const part = tileParts[i];
             const spriteHeight = tileWidth * (part.image.height / part.image.width);
-            const bleed = 2; // To prevent gaps between tiles
 
             ctx.drawImage(
                 part.image,
-                x - scale.x - bleed,
-                y - spriteHeight + tileWidth * 0.75 - scale.y * i - bleed,
-                tileWidth + bleed * 2,
-                spriteHeight + bleed * 2
+                x - scale.x,
+                y - spriteHeight + tileWidth * 0.75 - scale.y * i,
+                tileWidth,
+                spriteHeight
             );
         }
     }

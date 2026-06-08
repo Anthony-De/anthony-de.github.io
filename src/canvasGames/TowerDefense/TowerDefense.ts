@@ -22,7 +22,7 @@ export class TowerDefenseManager {
     private ctx: CanvasRenderingContext2D;
     private static readonly MAP_ROWS = 10;
     private static readonly MAP_COLS = 10;
-    private static readonly MIN_TILE_SCALE_X = TILE_SIZE / 8;
+    private static readonly MIN_TILE_SCALE_X = TILE_SIZE / 2;
     private static readonly MAX_TILE_SCALE_X = TILE_SIZE * 2;
     private static readonly TOUCH_MOUSE_SUPPRESSION_MS = 700;
 
@@ -145,9 +145,8 @@ export class TowerDefenseManager {
     };
 
     private handleResize = (): void => {
-        this.mapOffset = this.getClampedMapOffset(
-            new Vec2(this.canvas.width / 2, this.canvas.height / 4)
-        );
+        this.mapOffset = new Vec2(this.canvas.width / 2, this.canvas.height / 4);
+        // this.getClampedMapOffset();
     };
 
     private static detectMobileDevice(): boolean {
@@ -234,9 +233,11 @@ export class TowerDefenseManager {
 
                 if (this.isDraggingWorld) {
                     event.preventDefault();
-                    this.mapOffset = this.getClampedMapOffset(
-                        new Vec2(this.dragStartOffset.x + deltaX, this.dragStartOffset.y + deltaY)
+                    this.mapOffset = new Vec2(
+                        this.dragStartOffset.x + deltaX,
+                        this.dragStartOffset.y + deltaY
                     );
+                    // this.getClampedMapOffset();
 
                     return;
                 }
@@ -633,9 +634,11 @@ export class TowerDefenseManager {
             }
 
             if (this.isDraggingWorld) {
-                this.mapOffset = this.getClampedMapOffset(
-                    new Vec2(this.dragStartOffset.x + deltaX, this.dragStartOffset.y + deltaY)
+                this.mapOffset = new Vec2(
+                    this.dragStartOffset.x + deltaX,
+                    this.dragStartOffset.y + deltaY
                 );
+                // this.getClampedMapOffset();
 
                 return;
             }
@@ -779,7 +782,7 @@ export class TowerDefenseManager {
         );
 
         this.mapScale = new Vec2(clampedScaleX, clampedScaleX / 2);
-        this.mapOffset = this.getClampedMapOffset(this.mapOffset);
+        // this.mapOffset = this.getClampedMapOffset(this.mapOffset);
     }
 
     private placeRandomObstacle(tile: Tile): void {
@@ -840,26 +843,29 @@ export class TowerDefenseManager {
         );
     }
 
-    private getClampedMapOffset(nextOffset: Vec2): Vec2 {
-        const mapWidth = (this.map[0].length + this.map.length) * this.mapScale.x;
-        const mapHeight = (this.map[0].length + this.map.length) * this.mapScale.y;
+    // private getClampedMapOffset(nextOffset: Vec2): Vec2 {
+    //     const mapWidth = (this.map[0].length + this.map.length) * this.mapScale.x;
+    //     const mapHeight = (this.map[0].length + this.map.length) * this.mapScale.y;
 
-        const minOffsetX =
-            mapWidth <= this.canvas.width
-                ? this.map.length * this.mapScale.x
-                : this.canvas.width - this.map[0].length * this.mapScale.x;
-        const maxOffsetX =
-            mapWidth <= this.canvas.width
-                ? this.canvas.width - this.map[0].length * this.mapScale.x
-                : this.map.length * this.mapScale.x;
-        const minOffsetY = mapHeight <= this.canvas.height ? 0 : this.canvas.height - mapHeight;
-        const maxOffsetY = mapHeight <= this.canvas.height ? this.canvas.height - mapHeight : 0;
+    //     const minOffsetX =
+    //         mapWidth <= this.canvas.width
+    //             ? this.map.length * this.mapScale.x
+    //             : this.canvas.width - this.map[0].length * this.mapScale.x;
+    //     const maxOffsetX =
+    //         mapWidth <= this.canvas.width
+    //             ? this.canvas.width - this.map[0].length * this.mapScale.x
+    //             : this.map.length * this.mapScale.x;
+    //     const minOffsetY =
+    //         mapHeight <= this.canvas.height
+    //             ? TILE_SIZE / this.mapScale.y
+    //             : this.canvas.height - mapHeight;
+    //     const maxOffsetY = mapHeight <= this.canvas.height ? this.canvas.height - mapHeight : 0;
 
-        return new Vec2(
-            Math.min(maxOffsetX, Math.max(minOffsetX, nextOffset.x)),
-            Math.min(maxOffsetY, Math.max(minOffsetY, nextOffset.y))
-        );
-    }
+    //     return new Vec2(
+    //         Math.min(maxOffsetX, Math.max(minOffsetX, nextOffset.x)),
+    //         Math.min(maxOffsetY, Math.max(minOffsetY, nextOffset.y))
+    //     );
+    // }
 
     private beginZoomInteraction(): void {
         this.isZoomingWorld = true;
