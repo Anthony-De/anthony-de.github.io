@@ -52,9 +52,7 @@ const Canvas = React.forwardRef<HTMLCanvasElement, CanvasProps>(function Canvas(
                 canvas.width = window.innerWidth;
             }
             if (height === 'auto') {
-                const baseWidth =
-                    width === 'auto' ? canvas.width : Number(width) || window.innerWidth;
-                canvas.height = Math.floor(baseWidth / 2);
+                canvas.height = window.innerHeight;
             }
         };
 
